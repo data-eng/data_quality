@@ -1,28 +1,33 @@
 import numpy
 
-def inter_annotator_agreement( npz_object ):
-    # Inputs:
-    # a 2D numpy array where each row is multiple annotations
-    # of the same object and the last time is the ground truth.
-    # A label of -1 means "very bad sample, not possible to annotate"
-    #
-    # Returns an array with:
-    # 1: perfect agreement (or as good as it gets on this task)
-    # 0: bad agreement
-    # or a fraction inbetween
+def inter_annotator_agreement(npz_object):
+    """
+    Compute the inter-annotator agreement.
 
-    retv = []
-    for row in npz_object["y"]:
-        t = row[3]
-        l = row[0:3]
-        if t == -1: retv.append( 0.0 )
+    :param npz_object: numpy array (n x k) with annotations where:
+        - n is the number of samples
+        - k-1 represents annotations from k-1 annotators
+        - the k-th element represents the ground truth label
+        - a label of -1 indicates a very bad sample (not possible to annotate)
+    :return: numpy array (n x 1) with agreement scores for each sample:
+        - s = 1: perfect agreement (or as good as it gets on this task)
+        - s = 0: bad agreement
+        - 0 < s < 1: partial agreement
+    """
+    scores = []
+
+    for sample in npz_object["y"]:
+        ground_truth = sample[3]
+        labels = sample[0:3]
+
+        if ground_truth == -1: scores.append(0.0)
         else:
-            diffs = l - t
+            diffs = labels - ground_truth
             sqerr = (diffs*diffs).sum()
-            if sqerr == 0: retv.append( 1.0 )
-            elif sqerr == 1: retv.append( 0.5 )
-            else: retv.append( 0.2 )
-    assert npz_object["y"].shape[0] == len(retv)
-    return numpy.array( retv )
 
-
+            if sqerr == 0: scores.append(1.0)
+            elif sqerr == 1: scores.append(0.5)
+            else: scores.append(0.2)
+            
+    assert npz_object["y"].shape[0] == len(scores)
+    return numpy.array(scores)
