@@ -55,9 +55,13 @@ def spectral_features(mneData, plot=False):
         "bad":   [30.0, 60.0],
     }
 
-    spectrum = mneData.compute_psd( picks="eeg", fmin=0.5, fmax=50.0, verbose="ERROR" )
-    psds, freqs = spectrum.get_data( return_freqs=True )
-    psds /= numpy.sum( psds, axis=-1, keepdims=True )
+    try:
+        spectrum = mneData.compute_psd( picks="eeg", fmin=0.5, fmax=50.0, verbose="ERROR" )
+        psds, freqs = spectrum.get_data( return_freqs=True )
+        psds /= numpy.sum( psds, axis=-1, keepdims=True )
+    except:
+        # compute_psd() gives DivByZero sometimes
+        return numpy.zeros((1,12), dtype='int16')
 
     if plot:
         spectrum.plot(average=True, picks="eeg", exclude="bads", amplitude=False)

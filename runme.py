@@ -119,3 +119,5 @@ def main():
     logger.info("Testing %d low-qual samples only. First: %f, second: %f",
                 idx.shape[0], clf1.score(x,y2), clf2.score(x,y2))
     
+
+main()
