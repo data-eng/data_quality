@@ -1,6 +1,5 @@
 import sys, glob
 import numpy
-import pandas
 import json
 import logging
 
@@ -15,6 +14,42 @@ formatter = logging.Formatter('%(asctime)s:%(lineno)d:%(levelname)s:%(name)s:%(m
 stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
+
+def loader( nameglob ):
+    features = None
+    featurenames = None
+    qfeat = None
+    cfeat = None
+    quality = None
+    label = None
+    
+    filenamelist = glob.glob( nameglob )
+    for filename in filenamelist:
+        npz_object = numpy.load(filename)
+        (feat1,featnames1,qfeat1,cfeat1) = timeseries.features(npz_object)
+        if features is None: features = feat1
+        else: features = numpy.append(features, feat1, axis=0)
+        if featurenames is None: featurenames = featnames1
+        else: assert featurenames == featnames1
+        if qfeat is None: qfeat = qfeat1
+        else: assert qfeat == qfeat1
+        if cfeat is None: cfeat = cfeat1
+        else: assert cfeat == cfeat1
+        
+        quality1 = annotator_agreement.quality(npz_object)
+        if quality is None: quality = quality1
+        else: quality = numpy.append(quality, quality1, axis=0)
+
+        label1 = timeseries.labels(npz_object)
+        if label is None: label = label1
+        else: label = numpy.append(label, label1, axis=0)
+    #end for
+
+    assert quality.shape[0] == features.shape[0]
+    assert quality.shape[0] == label.shape[0]
+    return (features,quality,label,featurenames,qfeat,cfeat)
+#end def loader()
+
 
 def make_stats(scores):
     """
@@ -36,88 +71,71 @@ def make_stats(scores):
 
     with open('quality_stats.json', 'w') as json_file:
         json.dump({"Good": good, "Mid": mid, "Bad": bad}, json_file)
-
-def loader( filenamelist ):
-    features = None
-    featurenames = None
-    qfeat = None
-    cfeat = None
-    quality = None
-    label = None
-    for filename in filenamelist:
-        npz_object = numpy.load(filename)
-        (feat1,featnames1,qfeat1,cfeat1) = timeseries.features(npz_object)
-        if features is None: features = feat1
-        else: features = numpy.append(features, feat1, axis=0)
-        if featurenames is None: featurenames = featnames1
-        else: assert featurenames == featnames1
-        if qfeat is None: qfeat = qfeat1
-        else: assert qfeat == qfeat1
-        if cfeat is None: cfeat = cfeat1
-        else: assert cfeat == cfeat1
-        
-        quality1 = annotator_agreement.quality(npz_object)
-        if quality is None: quality = quality1
-        else: quality = numpy.append(quality, quality1, axis=0)
-
-        label1 = timeseries.labels(npz_object)
-        if label is None: label = label1
-        else: label = numpy.append(label, label1, axis=0)
-
-    assert quality.shape[0] == features.shape[0]
-    assert quality.shape[0] == label.shape[0]
-    return (features,quality,label,featurenames,qfeat,cfeat)
+#end def make_stats()
 
 
 def main():
     """
-    Process data from a .npz file, extract features, and compute quality metrics.
-    
+    Go through the whole process
     :return: None
     """
 
-    (features,quality,_,featurenames,qfeat,cfeat) = loader( glob.glob(f"data/*{sys.argv[1]}*npz") )
+    (features,quality,_,featurenames,qfeat,cfeat) = loader( f"data/*{sys.argv[1]}*npz" )
 
     logger.info("Using %s (%d samples) for training the quality model",
                 sys.argv[1], quality.shape[0])
 
-    qual_clf = sklearn.tree.DecisionTreeClassifier( max_depth=4 )
+    qual_clf = sklearn.tree.DecisionTreeClassifier( max_depth=6 )
     qual_clf.fit( features[:,qfeat], list(map(str, quality)) )
 
-    (features,_,labels,featurenames,qfeat,cfeat) = loader( glob.glob(f"data/*{sys.argv[2]}*npz") )
+    (features,quality,labels,featurenames,qfeat,cfeat) = loader( f"data/*{sys.argv[2]}*npz" )
+    logger.info("Testing on %s (%d samples) the quality model scored %f",
+                sys.argv[2], features.shape[0],
+                qual_clf.score(features[:,qfeat],list(map(str, quality)))
+                )
     
     logger.info("Using %s (%d samples) for training a classifier",
                 sys.argv[2], features.shape[0])
-    clf1 = sklearn.tree.DecisionTreeClassifier( max_depth=4 )
+    clf1 = sklearn.tree.DecisionTreeClassifier( max_depth=6 )
     clf1.fit( features[:,cfeat], list(map(str, labels)) )
 
     q = qual_clf.predict(features[:,qfeat])
-    idx = numpy.where(q=="1.0")[0] # not sure why numpy.where returns a tuple
-    logger.info("Among these, %d samples are high-quality. Using them to train another classifier.", idx.shape[0])
-    clf2 = sklearn.tree.DecisionTreeClassifier( max_depth=4 )
+    idx = numpy.where(q=="1.0")[0] # numpy.where returns a tuple of arrays, one per dimension
+    logger.info("%d samples are detected as high-quality. Using them to train another classifier.", idx.shape[0])
+    clf2 = sklearn.tree.DecisionTreeClassifier( max_depth=6 )
     x = features[idx][:,cfeat]
     y = numpy.array(list(map(str, labels)))[idx]
     clf2.fit(x, y)
 
-    (features,_,labels,featurenames,qfeat,cfeat) = loader( glob.glob(f"data/*{sys.argv[3]}*npz") )
+    clf3 = sklearn.tree.DecisionTreeClassifier( max_depth=6 )
+    idx = numpy.where(quality==1.0)[0]
+    x = features[idx][:,cfeat]
+    y = numpy.array(list(map(str, labels)))[idx]
+    logger.info("%d samples are really high-quality. Using them to train yet another classifier.", idx.shape[0])
+    clf3.fit(x, y)
+
+    (features,_,labels,featurenames,qfeat,cfeat) = loader( f"data/*{sys.argv[3]}*npz" )
     logger.info("Using %s (%d samples) for testing both classifiers",
                 sys.argv[3], features.shape[0])
     y = numpy.array(list(map(str, labels)))
-    logger.info("First: %f, second: %f",
+    logger.info("First: %f, second: %f, third: %f",
                 clf1.score(features[:,cfeat],y),
-                clf2.score(features[:,cfeat],y))
+                clf2.score(features[:,cfeat],y),
+                clf3.score(features[:,cfeat],y))
     
     q = qual_clf.predict(features[:,qfeat])
     idx = numpy.where(q=="1.0")[0]
     x = features[idx][:,cfeat]
     y1 = y[idx]
-    logger.info("Testing %d high-qual samples only. First: %f, second: %f",
-                idx.shape[0], clf1.score(x,y1), clf2.score(x,y1))
+    logger.info("Testing %d high-qual samples only. First: %f, second: %f, third: %f",
+                idx.shape[0],
+                clf1.score(x,y1), clf2.score(x,y1), clf3.score(x,y1))
     idx = numpy.where(q!="1.0")[0]
     x = features[idx][:,cfeat]
     y2 = y[idx]
-    logger.info("Testing %d low-qual samples only. First: %f, second: %f",
-                idx.shape[0], clf1.score(x,y2), clf2.score(x,y2))
+    logger.info("Testing %d low-qual samples only. First: %f, second: %f, third: %f",
+                idx.shape[0],
+                clf1.score(x,y2), clf2.score(x,y2), clf3.score(x,y2))
     
 
 main()

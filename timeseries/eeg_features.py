@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 def data_transform(x):
     """
     Transform EEG data shape from (a,b,c) to (a,c,b) where:
-        - a: number of EEG siognal recordings
+        - a: number of EEG signal recordings
         - b: length of each signal in terms of timesteps
         - c: number of channels
     
