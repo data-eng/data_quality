@@ -85,57 +85,55 @@ def main():
     logger.info("Using %s (%d samples) for training the quality model",
                 sys.argv[1], quality.shape[0])
 
-    qual_clf = sklearn.tree.DecisionTreeClassifier( max_depth=6 )
-    qual_clf.fit( features[:,qfeat], list(map(str, quality)) )
+    qual_clf = sklearn.tree.DecisionTreeRegressor( max_depth=6 )
+    qual_clf.fit( features[:,qfeat], quality )
 
     (features,quality,labels,featurenames,qfeat,cfeat) = loader( f"data/*{sys.argv[2]}*npz" )
     logger.info("Testing on %s (%d samples) the quality model scored %f",
                 sys.argv[2], features.shape[0],
-                qual_clf.score(features[:,qfeat],list(map(str, quality)))
-                )
+                qual_clf.score(features[:,qfeat],quality))
     
     logger.info("Using %s (%d samples) for training a classifier",
                 sys.argv[2], features.shape[0])
     clf1 = sklearn.tree.DecisionTreeClassifier( max_depth=6 )
-    clf1.fit( features[:,cfeat], list(map(str, labels)) )
+    clf1.fit(features[:,cfeat], labels)
 
     q = qual_clf.predict(features[:,qfeat])
-    idx = numpy.where(q=="1.0")[0] # numpy.where returns a tuple of arrays, one per dimension
-    logger.info("%d samples are detected as high-quality. Using them to train another classifier.", idx.shape[0])
+    idx = numpy.where(q>=0.8)[0] # numpy.where returns a tuple of arrays, one per dimension
+    logger.info("%d samples are detected as high-quality. Using them to train a second classifier.", idx.shape[0])
     clf2 = sklearn.tree.DecisionTreeClassifier( max_depth=6 )
     x = features[idx][:,cfeat]
-    y = numpy.array(list(map(str, labels)))[idx]
+    y = labels[idx]
     clf2.fit(x, y)
 
     clf3 = sklearn.tree.DecisionTreeClassifier( max_depth=6 )
-    idx = numpy.where(quality==1.0)[0]
+    idx = numpy.where(quality>=0.8)[0]
     x = features[idx][:,cfeat]
-    y = numpy.array(list(map(str, labels)))[idx]
-    logger.info("%d samples are really high-quality. Using them to train yet another classifier.", idx.shape[0])
+    y = labels[idx]
+    logger.info("%d samples are really high-quality. Using them to train a third classifier.", idx.shape[0])
     clf3.fit(x, y)
 
     (features,_,labels,featurenames,qfeat,cfeat) = loader( f"data/*{sys.argv[3]}*npz" )
-    logger.info("Using %s (%d samples) for testing both classifiers",
+    logger.info("Using %s (%d samples) for testing all classifiers",
                 sys.argv[3], features.shape[0])
-    y = numpy.array(list(map(str, labels)))
     logger.info("First: %f, second: %f, third: %f",
-                clf1.score(features[:,cfeat],y),
-                clf2.score(features[:,cfeat],y),
-                clf3.score(features[:,cfeat],y))
+                clf1.score(features[:,cfeat],labels),
+                clf2.score(features[:,cfeat],labels),
+                clf3.score(features[:,cfeat],labels))
     
     q = qual_clf.predict(features[:,qfeat])
-    idx = numpy.where(q=="1.0")[0]
+    idx = numpy.where(q>=0.8)[0]
     x = features[idx][:,cfeat]
-    y1 = y[idx]
+    y = labels[idx]
     logger.info("Testing %d high-qual samples only. First: %f, second: %f, third: %f",
                 idx.shape[0],
-                clf1.score(x,y1), clf2.score(x,y1), clf3.score(x,y1))
-    idx = numpy.where(q!="1.0")[0]
+                clf1.score(x,y), clf2.score(x,y), clf3.score(x,y))
+    idx = numpy.where(q<0.8)[0]
     x = features[idx][:,cfeat]
-    y2 = y[idx]
+    y = labels[idx]
     logger.info("Testing %d low-qual samples only. First: %f, second: %f, third: %f",
                 idx.shape[0],
-                clf1.score(x,y2), clf2.score(x,y2), clf3.score(x,y2))
+                clf1.score(x,y), clf2.score(x,y), clf3.score(x,y))
     
 
 main()
