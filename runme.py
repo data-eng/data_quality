@@ -6,6 +6,7 @@ import logging
 
 import annotator_agreement
 import timeseries
+import images
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -35,13 +36,12 @@ def make_stats(scores):
     with open('quality_stats.json', 'w') as json_file:
         json.dump({"Good": good, "Mid": mid, "Bad": bad}, json_file)
 
-def main():
+def do_npz(filename):
     """
     Process data from a .npz file, extract features, and compute quality metrics.
     
     :return: None
     """
-    filename = sys.argv[1]
     npz_object = numpy.load(filename)
 
     features, fnames = timeseries.features(npz_object)
@@ -56,3 +56,15 @@ def main():
 
     df = pandas.DataFrame(features, columns=fnames)
     df["Quality"] = quality
+
+def do_png(filename):
+    """
+    Process data from a PNG file, extract features, and compute quality metrics.
+    
+    :return: None
+    """
+    features = images.features(filename)
+    return features
+
+filename = sys.argv[1]
+features = do_png(filename)
