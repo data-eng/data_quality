@@ -6,8 +6,6 @@ import logging
 import annotator_agreement
 import timeseries
 
-import sklearn.tree
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s:%(lineno)d:%(levelname)s:%(name)s:%(message)s')
@@ -95,31 +93,31 @@ def main():
     
     logger.info("Using %s (%d samples) for training a classifier",
                 sys.argv[2], features.shape[0])
-    clf1 = sklearn.tree.DecisionTreeClassifier( max_depth=6 )
-    clf1.fit(features[:,cfeat], labels)
+    model1 = timeseries.create()
+    model1 = timeseries.fit(model1, features[:,cfeat], labels)
 
     q = qual_clf.predict(features[:,qfeat])
     idx = numpy.where(q>=0.8)[0] # numpy.where returns a tuple of arrays, one per dimension
     logger.info("%d samples are detected as high-quality. Using them to train a second classifier.", idx.shape[0])
-    clf2 = sklearn.tree.DecisionTreeClassifier( max_depth=6 )
+    model2 = timeseries.create()
     x = features[idx][:,cfeat]
     y = labels[idx]
-    clf2.fit(x, y)
+    model2 = timeseries.fit(model2, x, y)
 
-    clf3 = sklearn.tree.DecisionTreeClassifier( max_depth=6 )
+    model3 = timeseries.create()
     idx = numpy.where(quality>=0.8)[0]
     x = features[idx][:,cfeat]
     y = labels[idx]
     logger.info("%d samples are really high-quality. Using them to train a third classifier.", idx.shape[0])
-    clf3.fit(x, y)
+    model3 = timeseries.fit(model3, x, y)
 
     (features,_,labels,featurenames,qfeat,cfeat) = loader( f"data/*{sys.argv[3]}*npz" )
     logger.info("Using %s (%d samples) for testing all classifiers",
                 sys.argv[3], features.shape[0])
     logger.info("First: %f, second: %f, third: %f",
-                clf1.score(features[:,cfeat],labels),
-                clf2.score(features[:,cfeat],labels),
-                clf3.score(features[:,cfeat],labels))
+                timeseries.score(model1, features[:,cfeat],labels),
+                timeseries.score(model2, features[:,cfeat],labels),
+                timeseries.score(model3, features[:,cfeat],labels))
     
     q = qual_clf.predict(features[:,qfeat])
     idx = numpy.where(q>=0.8)[0]
@@ -133,7 +131,9 @@ def main():
     y = labels[idx]
     logger.info("Testing %d low-qual samples only. First: %f, second: %f, third: %f",
                 idx.shape[0],
-                clf1.score(x,y), clf2.score(x,y), clf3.score(x,y))
+                timeseries.score(model1,x,y),
+                timeseries.score(model2,x,y),
+                timeseries.score(model3,x,y))
     
 
 main()
