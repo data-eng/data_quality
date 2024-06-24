@@ -22,6 +22,8 @@ matplotlib = "^3.8"
 mne = "^1.7"
 
 # Image processing
+# note that cmake libdlib-dev are required by dlib
+# libdlib-dev depends on libdlib19 and libdlib-data
 dlib = "^19.24"
 face_recognition = "*"
 
