@@ -15,7 +15,7 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
-def loader( nameglob ):
+def npz_loader( nameglob ):
     features = None
     featurenames = None
     qfeat = None
@@ -48,7 +48,44 @@ def loader( nameglob ):
     assert quality.shape[0] == features.shape[0]
     assert quality.shape[0] == label.shape[0]
     return (features,quality,label,featurenames,qfeat,cfeat)
-#end def loader()
+#end def npz_loader()
+
+
+def png_loader( nameglob ):
+    filenamelist = glob.glob( nameglob )
+    features, fnames, qfeat, cfeat = images.features(filenamelist)
+    labels = {
+        "keyframe_0001": {"quality":1.0, "classif": "target" },
+        "keyframe_0002": {"quality":0.0, "classif": "none" },
+        "keyframe_0003": {"quality":0.0, "classif": "target" },
+        "keyframe_0004": {"quality":1.0, "classif": "target" },
+        "keyframe_0005": {"quality":0.0, "classif": "none" },
+        "keyframe_0006": {"quality":0.7, "classif": "target" },
+        "keyframe_0007": {"quality":0.0, "classif": "none" },
+        "keyframe_0008": {"quality":0.3, "classif": "target" },
+        "keyframe_0009": {"quality":0.0, "classif": "none" },
+        "keyframe_0010": {"quality":0.3, "classif": "target" },
+        "keyframe_0011": {"quality":0.7, "classif": "target" },
+        "keyframe_0012": {"quality":0.0, "classif": "none" },
+        "keyframe_0013": {"quality":0.0, "classif": "none" },
+        "keyframe_0014": {"quality":0.0, "classif": "none" },
+        "keyframe_0015": {"quality":0.0, "classif": "none" },
+        "keyframe_0016": {"quality":0.0, "classif": "none" },
+        "keyframe_0017": {"quality":0.3, "classif": "target" },
+        "keyframe_0018": {"quality":0.0, "classif": "none" },
+        "keyframe_0019": {"quality":0.0, "classif": "none" },
+        "keyframe_0020": {"quality":0.0, "classif": "none" },
+        "keyframe_0021": {"quality":0.0, "classif": "none" },
+        "keyframe_0022": {"quality":0.3, "classif": "target" },
+        "keyframe_0023": {"quality":0.0, "classif": "other" },
+        "keyframe_0024": {"quality":0.3, "classif": "target" } }
+    q = []
+    l = []
+    for n in range(1,25):
+        q.append( labels[f"keyframe_{n:04}"]["quality"] )
+        l.append( labels[f"keyframe_{n:04}"]["classif"] )
+    return (features,q,l,fnames,qfeat,cfeat)
+#end def png_loader()
 
 
 def make_stats(scores):
@@ -80,14 +117,14 @@ def do_npz():
     :return: None
     """
 
-    (features,quality,_,featurenames,qfeat,cfeat) = loader(sys.argv[1])
+    (features,quality,_,featurenames,qfeat,cfeat) = npz_loader(sys.argv[1])
 
     logger.info("Using %s (%d samples) for training the quality model",
                 sys.argv[1], quality.shape[0])
 
     estim = qual_regress.estimator_create(features[:,qfeat], quality)
 
-    (features,quality,labels,featurenames,qfeat,cfeat) = loader(sys.argv[2])
+    (features,quality,labels,featurenames,qfeat,cfeat) = npz_loader(sys.argv[2])
     logger.info("Testing on %s (%d samples) the quality model scored %f",
                 sys.argv[2], features.shape[0],
                 qual_regress.estimator_evaluate(estim,features[:,qfeat],quality))
@@ -109,7 +146,7 @@ def do_npz():
     logger.info("%d samples are labelled as high-quality. Using them to train a third classifier.", idx.shape[0])
     model3 = timeseries.task_create(x, y)
 
-    (features,_,labels,featurenames,qfeat,cfeat) = loader(sys.argv[3])
+    (features,_,labels,featurenames,qfeat,cfeat) = npz_loader(sys.argv[3])
     logger.info("Using %s (%d samples) for testing all classifiers",
                 sys.argv[3], features.shape[0])
     logger.info("First: %f, second: %f, third: %f",
@@ -142,7 +179,8 @@ def do_png():
     
     :return: None
     """
-    features = images.features(sys.argv[1])
-    return features
+    features,quality,labels,fnames,qfeat,cfeat = png_loader(sys.argv[1])
+    estim = qual_regress.estimator_create(features[:,qfeat], quality)
 
-do_npz()
+
+do_png()
