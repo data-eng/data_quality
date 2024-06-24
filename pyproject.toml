@@ -1,8 +1,9 @@
 [tool.poetry]
 name = "mldq"
 packages = [ {include = "annotator_agreement"},
-             {include = "timeseries"},
+             {include = "timeseries"}, {include = "images"},
 	     {include = "qual_regress"} ]
+>>>>>>> 150d3ee (Brought in some computer vision tools)
 version = "0.1"
 description = "Methods for estimating the quality of data to be used for ML exercises"
 authors = [ "Natalia Koliou <nataliakoliou@iit.demokritos.gr>",
@@ -17,7 +18,13 @@ numpy = "^1.26"
 scipy = "^1.11"
 scikit-learn = "^1.4"
 matplotlib = "^3.8"
+
+# Signal processing
 mne = "^1.7"
+
+# Image processing
+dlib = "^19.24"
+face_recognition = "*"
 
 [build-system]
 requires = ["poetry-core"]

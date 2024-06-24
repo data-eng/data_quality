@@ -6,6 +6,7 @@ import logging
 import annotator_agreement
 import timeseries
 import qual_regress
+import images
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -73,7 +74,7 @@ def make_stats(scores):
 #end def make_stats()
 
 
-def main():
+def do_npz():
     """
     Go through the whole process
     :return: None
@@ -135,4 +136,13 @@ def main():
                 timeseries.task_evaluate(model3,x,y))
     
 
-main()
+def do_png():
+    """
+    Process data from a PNG file, extract features, and compute quality metrics.
+    
+    :return: None
+    """
+    features = images.features(sys.argv[1])
+    return features
+
+do_npz()
