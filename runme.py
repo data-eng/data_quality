@@ -3,6 +3,8 @@ import numpy
 import json
 import logging
 
+import sklearn
+
 import annotator_agreement
 import timeseries
 
@@ -78,7 +80,7 @@ def main():
     :return: None
     """
 
-    (features,quality,_,featurenames,qfeat,cfeat) = loader( f"data/*{sys.argv[1]}*npz" )
+    (features,quality,_,featurenames,qfeat,cfeat) = loader(sys.argv[1])
 
     logger.info("Using %s (%d samples) for training the quality model",
                 sys.argv[1], quality.shape[0])
@@ -86,38 +88,35 @@ def main():
     qual_clf = sklearn.tree.DecisionTreeRegressor( max_depth=6 )
     qual_clf.fit( features[:,qfeat], quality )
 
-    (features,quality,labels,featurenames,qfeat,cfeat) = loader( f"data/*{sys.argv[2]}*npz" )
+    (features,quality,labels,featurenames,qfeat,cfeat) = loader(sys.argv[2])
     logger.info("Testing on %s (%d samples) the quality model scored %f",
                 sys.argv[2], features.shape[0],
                 qual_clf.score(features[:,qfeat],quality))
     
     logger.info("Using %s (%d samples) for training a classifier",
                 sys.argv[2], features.shape[0])
-    model1 = timeseries.create()
-    model1 = timeseries.fit(model1, features[:,cfeat], labels)
+    model1 = timeseries.task_create(features[:,cfeat], labels)
 
     q = qual_clf.predict(features[:,qfeat])
     idx = numpy.where(q>=0.8)[0] # numpy.where returns a tuple of arrays, one per dimension
-    logger.info("%d samples are detected as high-quality. Using them to train a second classifier.", idx.shape[0])
-    model2 = timeseries.create()
+    logger.info("%d samples are predicted as high-quality. Using them to train a second classifier.", idx.shape[0])
     x = features[idx][:,cfeat]
     y = labels[idx]
-    model2 = timeseries.fit(model2, x, y)
+    model2 = timeseries.task_create(x, y)
 
-    model3 = timeseries.create()
     idx = numpy.where(quality>=0.8)[0]
     x = features[idx][:,cfeat]
     y = labels[idx]
-    logger.info("%d samples are really high-quality. Using them to train a third classifier.", idx.shape[0])
-    model3 = timeseries.fit(model3, x, y)
+    logger.info("%d samples are labelled as high-quality. Using them to train a third classifier.", idx.shape[0])
+    model3 = timeseries.task_create(x, y)
 
-    (features,_,labels,featurenames,qfeat,cfeat) = loader( f"data/*{sys.argv[3]}*npz" )
+    (features,_,labels,featurenames,qfeat,cfeat) = loader(sys.argv[3])
     logger.info("Using %s (%d samples) for testing all classifiers",
                 sys.argv[3], features.shape[0])
     logger.info("First: %f, second: %f, third: %f",
-                timeseries.score(model1, features[:,cfeat],labels),
-                timeseries.score(model2, features[:,cfeat],labels),
-                timeseries.score(model3, features[:,cfeat],labels))
+                timeseries.task_evaluate(model1, features[:,cfeat],labels),
+                timeseries.task_evaluate(model2, features[:,cfeat],labels),
+                timeseries.task_evaluate(model3, features[:,cfeat],labels))
     
     q = qual_clf.predict(features[:,qfeat])
     idx = numpy.where(q>=0.8)[0]
@@ -125,15 +124,17 @@ def main():
     y = labels[idx]
     logger.info("Testing %d high-qual samples only. First: %f, second: %f, third: %f",
                 idx.shape[0],
-                clf1.score(x,y), clf2.score(x,y), clf3.score(x,y))
+                timeseries.task_evaluate(model1,x,y),
+                timeseries.task_evaluate(model2,x,y),
+                timeseries.task_evaluate(model3,x,y))
     idx = numpy.where(q<0.8)[0]
     x = features[idx][:,cfeat]
     y = labels[idx]
     logger.info("Testing %d low-qual samples only. First: %f, second: %f, third: %f",
                 idx.shape[0],
-                timeseries.score(model1,x,y),
-                timeseries.score(model2,x,y),
-                timeseries.score(model3,x,y))
+                timeseries.task_evaluate(model1,x,y),
+                timeseries.task_evaluate(model2,x,y),
+                timeseries.task_evaluate(model3,x,y))
     
 
 main()
