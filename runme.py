@@ -3,10 +3,9 @@ import numpy
 import json
 import logging
 
-import sklearn
-
 import annotator_agreement
 import timeseries
+import qual_regress
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -85,19 +84,18 @@ def main():
     logger.info("Using %s (%d samples) for training the quality model",
                 sys.argv[1], quality.shape[0])
 
-    qual_clf = sklearn.tree.DecisionTreeRegressor( max_depth=6 )
-    qual_clf.fit( features[:,qfeat], quality )
+    estim = qual_regress.estimator_create(features[:,qfeat], quality)
 
     (features,quality,labels,featurenames,qfeat,cfeat) = loader(sys.argv[2])
     logger.info("Testing on %s (%d samples) the quality model scored %f",
                 sys.argv[2], features.shape[0],
-                qual_clf.score(features[:,qfeat],quality))
-    
+                qual_regress.estimator_evaluate(estim,features[:,qfeat],quality))
+
     logger.info("Using %s (%d samples) for training a classifier",
                 sys.argv[2], features.shape[0])
     model1 = timeseries.task_create(features[:,cfeat], labels)
 
-    q = qual_clf.predict(features[:,qfeat])
+    q = qual_regress.estimator_apply(estim,features[:,qfeat])
     idx = numpy.where(q>=0.8)[0] # numpy.where returns a tuple of arrays, one per dimension
     logger.info("%d samples are predicted as high-quality. Using them to train a second classifier.", idx.shape[0])
     x = features[idx][:,cfeat]
@@ -118,7 +116,7 @@ def main():
                 timeseries.task_evaluate(model2, features[:,cfeat],labels),
                 timeseries.task_evaluate(model3, features[:,cfeat],labels))
     
-    q = qual_clf.predict(features[:,qfeat])
+    q = qual_regress.estimator_apply(estim,features[:,qfeat])
     idx = numpy.where(q>=0.8)[0]
     x = features[idx][:,cfeat]
     y = labels[idx]

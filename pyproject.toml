@@ -1,7 +1,8 @@
 [tool.poetry]
 name = "mldq"
 packages = [ {include = "annotator_agreement"},
-             {include = "timeseries"} ]
+             {include = "timeseries"},
+	     {include = "qual_regress"} ]
 version = "0.1"
 description = "Methods for estimating the quality of data to be used for ML exercises"
 authors = [ "Natalia Koliou <nataliakoliou@iit.demokritos.gr>",
