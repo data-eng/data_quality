@@ -18,9 +18,12 @@ scikit-learn = "^1.4"
 matplotlib = "^3.8"
 mne = "^1.7"
 
+yasa = "^0.6.4"
+librosa = "^0.10.2.post1"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 runme = "runme:main"
+create_eeg_spect_dataset = "timeseries:create_spectrograms"
