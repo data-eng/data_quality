@@ -1,3 +1,4 @@
+import os
 import logging
 
 def get_logger(level='DEBUG'):
@@ -13,3 +14,12 @@ def get_logger(level='DEBUG'):
     logger.addHandler(stream_handler)
     
     return logger
+
+def get_dir(*sub_dirs):
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    dir = os.path.join(script_dir, *sub_dirs)
+
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+
+    return dir
