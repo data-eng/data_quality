@@ -23,3 +23,9 @@ def get_dir(*sub_dirs):
         os.makedirs(dir)
 
     return dir
+
+def get_path(*dirs, filename):
+    dir_path = get_dir(*dirs)
+    path = os.path.join(dir_path, filename)
+
+    return path
