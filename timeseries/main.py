@@ -1,5 +1,3 @@
-from torch.utils.data import DataLoader
-
 from . import utils
 from . import loader
 
@@ -8,8 +6,9 @@ def main():
 
     datapaths = loader.split_data(dir=npz_dir, train_size=2, val_size=1, test_size=1)
     
-    dataframes = loader.create_dataframes(*datapaths, exist=True)
-    datasets = loader.create_datasets(*dataframes, seq_len=7680)
+    dataframes = loader.create_dataframes(datapaths, exist=True)
+    datasets = loader.create_datasets(dataframes, seq_len=7680)
+    dataloaders = loader.create_dataloaders(datasets, batch_size=8)
 
 if __name__ == "__main__":
     main()

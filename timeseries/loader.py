@@ -1,7 +1,8 @@
 import torch
+import multiprocessing
 import pandas as pd
 import numpy as np
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 import os
 
 from . import utils
@@ -77,23 +78,20 @@ def combine_data(paths):
 
     return df
 
-def create_dataframes(train_paths, val_paths, test_paths, exist=False):
+def create_dataframes(paths, exist=False):
     """
     Create or load dataframes for training, validation, and testing.
 
-    :param train_paths: list of training file paths
-    :param val_paths: list of validation file paths
-    :param test_paths: list of test file paths
+    :param paths: list of training, validation and test file paths
     :param exist: whether dataframe csvs already exist
     :return: tuple of dataframes
     """
     dataframes = []
     names = ['train', 'val', 'test']
-    all_paths = [train_paths, val_paths, test_paths]
 
     logger.debug("Creating dataframes for training, validation, and testing.")
 
-    for paths, name in zip(all_paths, names):
+    for paths, name in zip(paths, names):
         csv_path = utils.get_path('data', 'csv', filename=f"{name}.csv")
 
         if exist:
@@ -110,20 +108,17 @@ def create_dataframes(train_paths, val_paths, test_paths, exist=False):
 
     return tuple(dataframes)
 
-def create_datasets(train_df, val_df, test_df, seq_len=7680):
+def create_datasets(dataframes, seq_len=7680):
     """
     Create datasets for training, validation, and testing.
 
-    :param train_df: training dataframe
-    :param val_df: validation dataframe
-    :param test_df: testing dataframe
+    :param dataframes: training, validation and test dataframes
     :param seq_len: length of the input sequence
     :return: tuple of datasets
     """
 
     datasets = []
     X, t, y = ["HB_1", "HB_2"], ["Time"], ["Consensus"]
-    dataframes = [train_df, val_df, test_df]
 
     logger.debug("Creating datasets from dataframes.")
 
@@ -193,6 +188,37 @@ def create_datasets(train_df, val_df, test_df, seq_len=7680):
         dataset = TSDataset(df, seq_len, X, t, y)
         datasets.append(dataset)
 
-        logger.info(f"Dataset created with {len(dataset)} sequences!")
+    logger.info(f"Datasets created successfully!")
 
     return tuple(datasets)
+
+def create_dataloaders(datasets, batch_size=8, num_workers=None, shuffle=[True, False, False]):
+    """
+    Create dataloaders for training, validation, and testing.
+
+    :param datasets: training, validation and test datasets
+    :param batch_size: batch size for the dataloaders
+    :param num_workers: number of subprocesses to use for data loading
+    :param shuffle: whether to shuffle the data
+    :return: tuple of dataloaders
+    """
+    dataloaders = []
+    cpu_cores = multiprocessing.cpu_count()
+
+    if num_workers is None:
+        num_workers = cpu_cores
+
+    logger.info(f"System has {cpu_cores} CPU cores. Using {num_workers}/{cpu_cores} workers for data loading.")
+    
+    for dataset, shuffle in zip(datasets, shuffle):
+        dataloader = DataLoader(
+            dataset=dataset,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            num_workers=num_workers
+        )
+        dataloaders.append(dataloader)
+
+    logger.info("DataLoaders created successfully.")
+
+    return tuple(dataloaders)
