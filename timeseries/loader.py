@@ -3,7 +3,6 @@ import pandas as pd
 import os
 import mne
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
 
 from . import utils
 
@@ -66,7 +65,7 @@ def get_spectral_features(mneData, plot=False):
 
     X = np.array(X).reshape(6,2)
 
-    return X[-1].tolist() # a list like [a,b] of length 2
+    return X[-1].tolist()
 
 def count_muscle_artifacts(mneData, plot=False):
     """
@@ -129,40 +128,61 @@ def extract_features(npz_obj):
 
     return np.array(feature_vectors), ["AF7HiFreq","AF8HiFreq","Artifacts"]
 
-def create_df():
+def split_data(npz_files, train_size=57, val_size=1, test_size=1):
     """
-    Extracts feature vectors and labels from all .npz files in the specified directory 
-    and combines them into a dataframe.
-    
-    :param dir: directory containing .npz files
-    :return: tuple with features and labels
+    Split the npz files into training, validation, and test sets.
+
+    :param npz_files: list of all npz file paths
+    :param train_size: number of files for training
+    :param val_size: number of files for validation
+    :param test_size: number of files for testing
+    :return: tuple of npz file paths for train, val, and test sets
     """
-    features = []
-    labels = []
+    train_files = npz_files[:train_size]
+    val_files = npz_files[train_size:train_size + val_size]
+    test_files = npz_files[train_size + val_size:train_size + val_size + test_size]
 
-    npz_dir = utils.get_dir('data', 'npz')
+    return (train_files, val_files, test_files)
+
+def load_dataframes(train_files, val_files, test_files):
+    """
+    Extracts feature vectors and labels from .npz files, splits them into train, val and test sets, 
+    and saves them to CSV files.
     
-    for file in os.listdir(npz_dir):
-        if file.endswith(".npz"):
-            npz_path = utils.get_path(npz_dir, filename=file)
-            npz_obj = np.load(npz_path)
+    :param train_files: list of file paths for training data
+    :param val_files: list of file paths for validation data
+    :param test_files: list of file paths for testing data
+    :return: tuple
+    """
+    dataframes = []
 
+    for files, name in zip([train_files, val_files, test_files], ['train.csv', 'val.csv', 'test.csv']):
+        features = []
+        labels = []
+
+        for file in files:
+            npz_obj = np.load(file)
             vectors, names = extract_features(npz_obj)
 
             features.append(vectors)
             labels.append(npz_obj['y'][:, -1])
 
-    df = pd.DataFrame(np.vstack(features), columns=names)
-    df['Consensus'] = np.hstack(labels)
+        df = pd.DataFrame(np.vstack(features), columns=names)
+        df['Consensus'] = np.hstack(labels)
+        dataframes.append(df)
 
-    csv_path = utils.get_path('data', 'csv', filename='data.csv')
-    df.to_csv(csv_path, index=False)
-    logger.info("Feature extraction completed!")
+        csv_path = utils.get_path('data', 'csv', filename=name)
+        df.to_csv(csv_path, index=False)
 
-    return df
+    return tuple(dataframes)
 
 def main():
-    df = create_df()
+    npz_dir = utils.get_dir('data', 'npz')
+    npz_files = [utils.get_path(npz_dir, filename=file) for file in os.listdir(npz_dir)]
+
+    data = split_data(npz_files, train_size=57, val_size=1, test_size=1)
+
+    train_df, val_df, test_df = load_dataframes(*data)
 
 if __name__ == "__main__":
     main()
