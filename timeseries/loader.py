@@ -52,27 +52,32 @@ def combine_data(paths):
 
     for path in paths:
         X, y, _, labels = load_file(path)
+        
         num_epochs = X.shape[0]
+        samples_per_epoch = X.shape[1]
+        label_names = [item[0] for sublist in labels for item in sublist]
 
         for epoch in range(num_epochs):
-            data = X[epoch]
-            df = pd.DataFrame(data, columns=labels)
+            df = pd.DataFrame(X[epoch], columns=label_names)
+
             df['Consensus'] = y[epoch, 3]
+            df['Time'] = np.arange(1, samples_per_epoch + 1)
 
             dataframes.append(df)
 
     df = pd.concat(dataframes, ignore_index=True)
-    logger.info(f"Combined data frame shape: {df.shape}")
+    logger.info(f"Combined dataframe shape: {df.shape}")
 
     return df
 
-def create_dataframes(train_paths, val_paths, test_paths):
+def create_dataframes(train_paths, val_paths, test_paths, exist=False):
     """
-    Create dataframes for training, validation, and testing.
+    Create or load dataframes for training, validation, and testing.
 
     :param train_paths: list of training file paths
     :param val_paths: list of validation file paths
     :param test_paths: list of test file paths
+    :param exist: whether dataframe csvs already exist
     :return: tuple of dataframes
     """
     dataframes = []
@@ -80,19 +85,19 @@ def create_dataframes(train_paths, val_paths, test_paths):
     all_paths = [train_paths, val_paths, test_paths]
 
     for paths, name in zip(all_paths, names):
-        df = combine_data(paths)
-        df.to_csv(f"{name}.csv", index=False)
+        csv_path = utils.get_path('data', 'csv', filename=f"{name}.csv")
+
+        if exist:
+            df = pd.read_csv(csv_path)
+            logger.info(f"Loaded existing dataframe from {csv_path}")
+        else:
+            df = combine_data(paths)
+            df.to_csv(csv_path, index=False)
+            logger.info(f"Saved new dataframe to {csv_path}")
+
         dataframes.append(df)
 
-    logger.info("Saved training, validation, and testing data to CSV files!")
+    logger.info("Dataframes for training, validation, and testing are ready!")
+
     return tuple(dataframes)
 
-def main():
-    npz_dir = utils.get_dir('data', 'npz')
-
-    data = split_data(dir=npz_dir, train_size=57, val_size=1, test_size=1)
-
-    train_df, val_df, test_df = create_dataframes(*data)
-
-if __name__ == "__main__":
-    main()
