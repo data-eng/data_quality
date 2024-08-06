@@ -9,6 +9,70 @@ from . import utils
 
 logger = utils.get_logger(level='DEBUG')
 
+class TSDataset(Dataset):
+    def __init__(self, df, seq_len, X, t, y, per_epoch=True):
+        """
+        Initializes a time series dataset.
+
+        :param df: dataframe
+        :param seq_len: length of the input sequence
+        :param X: list of feature columns
+        :param t: list of time columns
+        :param y: list of target columns
+        :param per_epoch: whether to create sequences with overlapping epochs or not
+        """
+        self.seq_len = seq_len
+        self.X = pd.concat([df[X], df[t]], axis=1)
+        self.y = df[y]
+        self.per_epoch = per_epoch
+        self.num_samples = self.X.shape[0]
+
+        logger.info(f"Initializing dataset with seq_len={seq_len}, samples={self.num_samples}, sequences={self.num_seqs}")
+
+    def __len__(self):
+        """
+        :return: length of the dataset
+        """
+        return self.num_seqs
+
+    def __getitem__(self, idx):
+        """
+        Retrieves a sample from the dataset at the specified index.
+
+        :param idx: index of the sample
+        :return: tuple of features and target tensors
+        """
+        if self.per_epoch:
+            start_idx = idx * self.seq_len
+        else:
+            start_idx = idx
+
+        end_idx = start_idx + self.seq_len
+
+        X = self.X.iloc[start_idx:end_idx].values
+        y = self.y.iloc[start_idx:end_idx].values
+
+        X, y = torch.FloatTensor(X), torch.FloatTensor(y)
+
+        return X, y
+    
+    @property
+    def max_seq_id(self):
+        """
+        :return: maximum index for a sequence
+        """
+        return self.num_samples - self.seq_len
+    
+    @property
+    def num_seqs(self):
+        """
+        :return: number of sequences that can be created from the dataset
+        """
+        if self.per_epoch:
+            return self.max_seq_id + 1
+        else:
+            return self.num_samples // self.seq_len
+
 def split_data(dir, train_size=57, val_size=1, test_size=1):
     """
     Split the npz files into training, validation, and test sets.
@@ -20,13 +84,13 @@ def split_data(dir, train_size=57, val_size=1, test_size=1):
     :return: tuple of lists containing npz file paths for train, val, and test sets
     """
     paths = [utils.get_path(dir, filename=file) for file in os.listdir(dir)]
-    logger.debug(f"Found {len(paths)} files in directory: {dir} ready for splitting.")
+    logger.info(f"Found {len(paths)} files in directory: {dir} ready for splitting.")
 
     train_paths = paths[:train_size]
     val_paths = paths[train_size:train_size + val_size]
     test_paths = paths[train_size + val_size:train_size + val_size + test_size]
 
-    logger.debug(f"Splitting complete!")
+    logger.info(f"Splitting complete!")
 
     return (train_paths, val_paths, test_paths)
 
@@ -56,7 +120,7 @@ def combine_data(paths):
     """
     dataframes = []
 
-    logger.debug(f"Combining data from {len(paths)} files.")
+    logger.info(f"Combining data from {len(paths)} files.")
 
     for path in paths:
         X, y, _, labels = load_file(path)
@@ -89,7 +153,7 @@ def create_dataframes(paths, exist=False):
     dataframes = []
     names = ['train', 'val', 'test']
 
-    logger.debug("Creating dataframes for training, validation, and testing.")
+    logger.info("Creating dataframes for training, validation, and testing.")
 
     for paths, name in zip(paths, names):
         csv_path = utils.get_path('data', 'csv', filename=f"{name}.csv")
@@ -120,69 +184,7 @@ def create_datasets(dataframes, seq_len=7680):
     datasets = []
     X, t, y = ["HB_1", "HB_2"], ["Time"], ["Consensus"]
 
-    logger.debug("Creating datasets from dataframes.")
-
-    class TSDataset(Dataset):
-        def __init__(self, df, seq_len, X, t, y, per_epoch=True):
-            """
-            Initializes a time series dataset.
-
-            :param df: dataframe
-            :param seq_len: length of the input sequence
-            :param X: list of feature columns
-            :param t: list of time columns
-            :param y: list of target columns
-            :param per_epoch: whether to create sequences with overlapping epochs or not
-            """
-            self.seq_len = seq_len
-            self.X = pd.concat([df[X], df[t]], axis=1)
-            self.y = df[y]
-            self.per_epoch = per_epoch
-            self.num_samples = self.X.shape[0]
-
-            logger.debug(f"Initializing dataset with seq_len={seq_len}, samples={self.num_samples}, sequences={self.num_seqs}")
-
-        def __len__(self):
-            """
-            :return: length of the dataset
-            """
-            return self.num_seqs
-
-        def __getitem__(self, idx):
-            """
-            Retrieves a sample from the dataset at the specified index.
-
-            :param idx: index of the sample
-            :return: tuple of features and target tensors
-            """
-            if self.per_epoch:
-                start_idx = idx * self.seq_len
-            else:
-                start_idx = idx
-
-            end_idx = start_idx + self.seq_len
-
-            X = self.X.iloc[start_idx:end_idx].values
-            y = self.y.iloc[start_idx:end_idx].values
-
-            return torch.FloatTensor(X), torch.FloatTensor(y)
-        
-        @property
-        def max_seq_id(self):
-            """
-            :return: maximum index for a sequence
-            """
-            return self.num_samples - self.seq_len
-        
-        @property
-        def num_seqs(self):
-            """
-            :return: number of sequences that can be created from the dataset
-            """
-            if self.per_epoch:
-                return self.max_seq_id + 1
-            else:
-                return self.num_samples // self.seq_len 
+    logger.info("Creating datasets from dataframes.") 
 
     for df in dataframes:
         dataset = TSDataset(df, seq_len, X, t, y)
