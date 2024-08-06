@@ -134,11 +134,13 @@ class Encoder(nn.Module):
         """
         super(Encoder, self).__init__()
 
-        self.attention = MultiHeadAttention(d_model, num_heads)
+        self.self_attn = MultiHeadAttention(d_model, num_heads)
 
         self.ffn = FeedForward(d_model, ff_dim)
 
-        self.normalization = nn.LayerNorm(d_model)
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+
         self.dropout = nn.Dropout(dropout)
         
     def forward(self, x, mask=None):
@@ -149,16 +151,63 @@ class Encoder(nn.Module):
         :param mask: optional mask to avoid attention on certain positions
         :return: tensor (batch_size, seq_length, d_model)
         """
-        attn_x = self.attention(x, x, x, mask)
+        self_attn_x = self.self_attn(x, x, x, mask)
 
-        x = x + self.dropout(attn_x)
-        x = self.normalization(x)
+        x = x + self.dropout(self_attn_x)
+        x = self.norm1(x)
         
         ffn_x = self.ffn(x)
 
         x = x + self.dropout(ffn_x)
-        x = self.normalization(x)
+        x = self.norm2(x)
         
+        return x
+    
+class Decoder(nn.Module):
+    def __init__(self, d_model, num_heads, ff_dim, dropout=0.1):
+        """
+        Initialize the Decoder module.
+
+        :param d_model: dimension of the input and output features
+        :param num_heads: number of attention heads
+        :param ff_dim: dimension of the feedforward network hidden layer
+        :param dropout: rate for randomly deactivating neurons during training
+        """
+        super(Decoder, self).__init__()
+
+        self.self_attn = MultiHeadAttention(d_model, num_heads)
+        self.cross_attn = MultiHeadAttention(d_model, num_heads)
+
+        self.ffn = FeedForward(d_model, ff_dim)
+
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.norm3 = nn.LayerNorm(d_model)
+
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, enc_output, src_mask=None, tgt_mask=None):
+        """
+        Forward pass through the decoder.
+
+        :param x: target tensor (batch_size, tgt_seq_length, d_model)
+        :param enc_output: output from the encoder (batch_size, src_seq_length, d_model)
+        :param src_mask: optional mask for the source sequence
+        :param tgt_mask: optional mask for the target sequence
+        :return: tensor (batch_size, tgt_seq_length, d_model)
+        """
+        self_attn_x = self.self_attn(x, x, x, tgt_mask)
+        x = x + self.dropout(self_attn_x)
+        x = self.norm1(x)
+
+        cross_attn_x = self.cross_attn(x, enc_output, enc_output, src_mask)
+        x = x + self.dropout(cross_attn_x)
+        x = self.norm2(x)
+
+        ffn_x = self.ffn(x)
+        x = x + self.dropout(ffn_x)
+        x = self.norm3(x)
+
         return x
     
 class Transformer(nn.Module):
