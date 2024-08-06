@@ -25,7 +25,6 @@ class TSDataset(Dataset):
         self.X = pd.concat([df[X], df[t]], axis=1)
         self.y = df[y]
         self.per_epoch = per_epoch
-        self.num_samples = self.X.shape[0]
 
         logger.info(f"Initializing dataset with seq_len={seq_len}, samples={self.num_samples}, sequences={self.num_seqs}")
 
@@ -57,6 +56,10 @@ class TSDataset(Dataset):
         return X, y
     
     @property
+    def num_samples(self):
+        return self.X.shape[0]
+
+    @property
     def max_seq_id(self):
         """
         :return: maximum index for a sequence
@@ -69,9 +72,9 @@ class TSDataset(Dataset):
         :return: number of sequences that can be created from the dataset
         """
         if self.per_epoch:
-            return self.max_seq_id + 1
-        else:
             return self.num_samples // self.seq_len
+        else:
+            return self.max_seq_id + 1
 
 def split_data(dir, train_size=57, val_size=1, test_size=1):
     """
