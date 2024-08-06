@@ -95,8 +95,84 @@ class MultiHeadAttention(nn.Module):
 
         return output
 
+class FeedForward(nn.Module):
+    def __init__(self, d_model, ff_dim):
+        """
+        Initialize the FeedForward module.
+
+        :param d_model: dimension of the input and output features
+        :param ff_dim: dimension of the feedforward network hidden layer
+        """
+        super(FeedForward, self).__init__()
+
+        self.fc1 = nn.Linear(d_model, ff_dim)
+        self.fc2 = nn.Linear(ff_dim, d_model)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        """
+        Forward pass through the feedforward network.
+
+        :param x: tensor (batch_size, seq_length, d_model)
+        :return: tensor (batch_size, seq_length, d_model)
+        """
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)
+
+        return x
+    
+class Encoder(nn.Module):
+    def __init__(self, d_model, num_heads, ff_dim, dropout=0.1):
+        """
+        Initialize the Encoder module.
+
+        :param d_model: dimension of the input and output features
+        :param num_heads: number of attention heads
+        :param ff_dim: dimension of the feedforward network hidden layer
+        :param dropout: rate for randomly deactivating neurons during training
+        """
+        super(Encoder, self).__init__()
+
+        self.attention = MultiHeadAttention(d_model, num_heads)
+
+        self.ffn = FeedForward(d_model, ff_dim)
+
+        self.normalization = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(dropout)
+        
+    def forward(self, x, mask=None):
+        """
+        Forward pass through the encoder.
+
+        :param x: tensor (batch_size, seq_length, d_model)
+        :param mask: optional mask to avoid attention on certain positions
+        :return: tensor (batch_size, seq_length, d_model)
+        """
+        attn_x = self.attention(x, x, x, mask)
+
+        x = x + self.dropout(attn_x)
+        x = self.normalization(x)
+        
+        ffn_x = self.ffn(x)
+
+        x = x + self.dropout(ffn_x)
+        x = self.normalization(x)
+        
+        return x
+    
 class Transformer(nn.Module):
     def __init__(self, in_size=3, out_size=5, nhead=1, num_layers=1, dim_feedforward=2048, dropout=0):
+        """
+        Initialize the Transformer model.
+
+        :param in_size: xize of the input features
+        :param out_size: size of the output classes
+        :param nhead: number of attention heads
+        :param num_layers: number of encoder layers
+        :param dim_feedforward: dimension of the feedforward network hidden layer
+        :param dropout: dropout rate
+        """
         super(Transformer, self).__init__()
 
         self.nhead = nhead
@@ -107,10 +183,10 @@ class Transformer(nn.Module):
 
     def init_weights(self):
         """
-        Initializes the weights and biases of the classifier linear layer:
+        Initialize the weights and biases of the classifier linear layer:
 
-        - Sets the bias of the classifier linear layer to zero.
-        - Initializes the weights with values drawn from a Xavier uniform distribution.
+        - Set the bias of the classifier linear layer to zero.
+        - Initialize the weights with values drawn from a Xavier uniform distribution.
         """ 
         self.classifier.bias.data.zero_()
         nn.init.xavier_uniform_(self.classifier.weight.data)
