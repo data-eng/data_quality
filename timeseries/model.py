@@ -138,14 +138,14 @@ class Encoder(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
         
-    def forward(self, src):
+    def forward(self, x):
         """
         Forward pass through the encoder.
 
-        :param src: tensor (batch_size, seq_length, d_model)
+        :param x: tensor (batch_size, seq_length, d_model)
         :return: tensor (batch_size, seq_length, d_model)
         """
-        self_attn_x = self.self_attn(src, src, src)
+        self_attn_x = self.self_attn(x, x, x)
 
         x = x + self.dropout(self_attn_x)
         x = self.norm1(x)
@@ -155,51 +155,6 @@ class Encoder(nn.Module):
         x = x + self.dropout(ffn_x)
         x = self.norm2(x)
         
-        return x
-    
-class Decoder(nn.Module):
-    def __init__(self, d_model, num_heads, dim_feedforward, dropout=0.1):
-        """
-        Initialize the Decoder module.
-
-        :param d_model: dimension of the input and output features
-        :param num_heads: number of attention heads
-        :param dim_feedforward: dimension of the feedforward network hidden layer
-        :param dropout: rate for randomly deactivating neurons during training
-        """
-        super(Decoder, self).__init__()
-
-        self.self_attn = MultiHeadAttention(d_model, num_heads)
-        self.cross_attn = MultiHeadAttention(d_model, num_heads)
-
-        self.ffn = FeedForward(d_model, dim_feedforward)
-
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
-        self.norm3 = nn.LayerNorm(d_model)
-
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, src, tgt):
-        """
-        Forward pass through the decoder.
-
-        :param src: tensor (batch_size, seq_length, d_model)
-        :param tgt: tensor (batch_size, seq_length, d_model)
-        :return: tensor (batch_size, seq_length, d_model)
-        """
-        self_attn_x = self.self_attn(tgt, tgt, tgt)
-        x = x + self.dropout(self_attn_x)
-        x = self.norm1(x)
-
-        cross_attn_x = self.cross_attn(x, src, src)
-        x = x + self.dropout(cross_attn_x)
-        x = self.norm2(x)
-
-        ffn_x = self.ffn(x)
-        x = x + self.dropout(ffn_x)
-        x = self.norm3(x)
-
         return x
     
 class Transformer(nn.Module):
@@ -210,19 +165,17 @@ class Transformer(nn.Module):
         :param in_size: size of the input features
         :param out_size: size of the output classes
         :param nhead: number of attention heads
-        :param num_layers: number of encoder/decoder layers
+        :param num_layers: number of encoder layers
         :param dim_feedforward: dimension of the feedforward network hidden layer
         :param dropout: dropout rate
         """
         super(Transformer, self).__init__()
 
-        self.enc_embedding = nn.Embedding(in_size, d_model)
-        self.dec_embedding = nn.Embedding(out_size, d_model)
+        self.embedding = nn.Embedding(in_size, d_model)
 
         self.encoder = nn.ModuleList([Encoder(d_model, num_heads, dim_feedforward, dropout) for _ in range(num_layers)])
-        self.decoder = nn.ModuleList([Decoder(d_model, num_heads, dim_feedforward, dropout) for _ in range(num_layers)])
         
-        self.classifier = nn.Linear(in_size, out_size)
+        self.classifier = nn.Linear(d_model, out_size)
         self.dropout = nn.Dropout(dropout)
 
         self.init_weights()
@@ -236,26 +189,19 @@ class Transformer(nn.Module):
         self.classifier.bias.data.zero_()
         nn.init.xavier_uniform_(self.classifier.weight.data)
         
-    def forward(self, src, tgt):
+    def forward(self, x):
         """
         Forward pass of the transformer model.
 
-        :param src: tensor (batch_size, seq_length, d_model)
-        :param tgt: tensor (batch_size, seq_length, d_model)
+        :param x: tensor (batch_size, seq_length, d_model)
         :return: tensor (batch_size, seq_length, out_size)
         """
-        src = self.enc_embedding(src)
-        src = self.dropout(src)
+        x = self.enc_embedding(x)
+        x = self.dropout(x)
                                              
         for enc_layer in self.encoder:
-            src = enc_layer(src=src)
+            x = enc_layer(x=x)
 
-        tgt = self.dec_embedding(tgt)
-        tgt = self.dropout(tgt)
-
-        for dec_layer in self.decoder:
-            tgt = dec_layer(src, tgt)
-
-        output = self.classifier(tgt)
+        output = self.classifier(x)
 
         return output
