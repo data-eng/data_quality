@@ -23,23 +23,19 @@ class MultiHeadAttention(nn.Module):
         self.W_v = nn.Linear(d_model, d_model)
         self.W_o = nn.Linear(d_model, d_model)
         
-    def attention_scores(self, Q, K, V, mask=None):
+    def attention_scores(self, Q, K, V):
         """
         Calculates the attention scores and applies them to the values.
         
         :param Q: query matrix
         :param K: key matrix
         :param V: value matrix
-        :param mask: optional mask to prevent attention to certain positions
         :return: attention scores per head
         """
         dot_product = torch.matmul(Q, K.transpose(-2, -1))
 
         scaling_factor = math.sqrt(self.d_k)
         attn_scores = dot_product / scaling_factor
-
-        if mask is not None:
-            attn_scores = attn_scores.masked_fill(mask == 0, -1e9)
 
         attn_probs = torch.softmax(attn_scores, dim=-1)
         attn_scores = torch.matmul(attn_probs, V)
@@ -74,21 +70,20 @@ class MultiHeadAttention(nn.Module):
         
         return x
         
-    def forward(self, Q, K, V, mask=None):
+    def forward(self, Q, K, V):
         """
         Forward pass for multi-head attention.
 
         :param Q: query matrix
         :param K: key matrix
         :param V: value matrix
-        :param mask: optional mask to avoid attention on certain positions
         :return: multi-head attention matrix
         """
         Q = self.split_heads(x=self.W_q(Q))
         K = self.split_heads(x=self.W_k(K))
         V = self.split_heads(x=self.W_v(V))
         
-        attn_scores = self.attention_scores(Q, K, V, mask)
+        attn_scores = self.attention_scores(Q, K, V)
         attn_matrix = self.combine_heads(attn_scores)
         
         output = self.W_o(attn_matrix)
@@ -96,17 +91,17 @@ class MultiHeadAttention(nn.Module):
         return output
 
 class FeedForward(nn.Module):
-    def __init__(self, d_model, ff_dim):
+    def __init__(self, d_model, dim_feedforward):
         """
         Initialize the FeedForward module.
 
         :param d_model: dimension of the input and output features
-        :param ff_dim: dimension of the feedforward network hidden layer
+        :param dim_feedforward: dimension of the feedforward network hidden layer
         """
         super(FeedForward, self).__init__()
 
-        self.fc1 = nn.Linear(d_model, ff_dim)
-        self.fc2 = nn.Linear(ff_dim, d_model)
+        self.fc1 = nn.Linear(d_model, dim_feedforward)
+        self.fc2 = nn.Linear(dim_feedforward, d_model)
         self.relu = nn.ReLU()
 
     def forward(self, x):
@@ -123,35 +118,34 @@ class FeedForward(nn.Module):
         return x
     
 class Encoder(nn.Module):
-    def __init__(self, d_model, num_heads, ff_dim, dropout=0.1):
+    def __init__(self, d_model, num_heads, dim_feedforward, dropout=0.1):
         """
         Initialize the Encoder module.
 
         :param d_model: dimension of the input and output features
         :param num_heads: number of attention heads
-        :param ff_dim: dimension of the feedforward network hidden layer
+        :param dim_feedforward: dimension of the feedforward network hidden layer
         :param dropout: rate for randomly deactivating neurons during training
         """
         super(Encoder, self).__init__()
 
         self.self_attn = MultiHeadAttention(d_model, num_heads)
 
-        self.ffn = FeedForward(d_model, ff_dim)
+        self.ffn = FeedForward(d_model, dim_feedforward)
 
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
 
         self.dropout = nn.Dropout(dropout)
         
-    def forward(self, x, mask=None):
+    def forward(self, src):
         """
         Forward pass through the encoder.
 
-        :param x: tensor (batch_size, seq_length, d_model)
-        :param mask: optional mask to avoid attention on certain positions
+        :param src: tensor (batch_size, seq_length, d_model)
         :return: tensor (batch_size, seq_length, d_model)
         """
-        self_attn_x = self.self_attn(x, x, x, mask)
+        self_attn_x = self.self_attn(src, src, src)
 
         x = x + self.dropout(self_attn_x)
         x = self.norm1(x)
@@ -164,13 +158,13 @@ class Encoder(nn.Module):
         return x
     
 class Decoder(nn.Module):
-    def __init__(self, d_model, num_heads, ff_dim, dropout=0.1):
+    def __init__(self, d_model, num_heads, dim_feedforward, dropout=0.1):
         """
         Initialize the Decoder module.
 
         :param d_model: dimension of the input and output features
         :param num_heads: number of attention heads
-        :param ff_dim: dimension of the feedforward network hidden layer
+        :param dim_feedforward: dimension of the feedforward network hidden layer
         :param dropout: rate for randomly deactivating neurons during training
         """
         super(Decoder, self).__init__()
@@ -178,7 +172,7 @@ class Decoder(nn.Module):
         self.self_attn = MultiHeadAttention(d_model, num_heads)
         self.cross_attn = MultiHeadAttention(d_model, num_heads)
 
-        self.ffn = FeedForward(d_model, ff_dim)
+        self.ffn = FeedForward(d_model, dim_feedforward)
 
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
@@ -186,21 +180,19 @@ class Decoder(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x, enc_output, src_mask=None, tgt_mask=None):
+    def forward(self, src, tgt):
         """
         Forward pass through the decoder.
 
-        :param x: target tensor (batch_size, tgt_seq_length, d_model)
-        :param enc_output: output from the encoder (batch_size, src_seq_length, d_model)
-        :param src_mask: optional mask for the source sequence
-        :param tgt_mask: optional mask for the target sequence
-        :return: tensor (batch_size, tgt_seq_length, d_model)
+        :param src: tensor (batch_size, seq_length, d_model)
+        :param tgt: tensor (batch_size, seq_length, d_model)
+        :return: tensor (batch_size, seq_length, d_model)
         """
-        self_attn_x = self.self_attn(x, x, x, tgt_mask)
+        self_attn_x = self.self_attn(tgt, tgt, tgt)
         x = x + self.dropout(self_attn_x)
         x = self.norm1(x)
 
-        cross_attn_x = self.cross_attn(x, enc_output, enc_output, src_mask)
+        cross_attn_x = self.cross_attn(x, src, src)
         x = x + self.dropout(cross_attn_x)
         x = self.norm2(x)
 
@@ -211,46 +203,59 @@ class Decoder(nn.Module):
         return x
     
 class Transformer(nn.Module):
-    def __init__(self, in_size=3, out_size=5, nhead=1, num_layers=1, dim_feedforward=2048, dropout=0):
+    def __init__(self, in_size=3, out_size=5, d_model=512, num_heads=1, num_layers=1, dim_feedforward=2048, dropout=0):
         """
         Initialize the Transformer model.
 
-        :param in_size: xize of the input features
+        :param in_size: size of the input features
         :param out_size: size of the output classes
         :param nhead: number of attention heads
-        :param num_layers: number of encoder layers
+        :param num_layers: number of encoder/decoder layers
         :param dim_feedforward: dimension of the feedforward network hidden layer
         :param dropout: dropout rate
         """
         super(Transformer, self).__init__()
 
-        self.nhead = nhead
-        self.encoder = ...
-        self.decoder = ...
+        self.enc_embedding = nn.Embedding(in_size, d_model)
+        self.dec_embedding = nn.Embedding(out_size, d_model)
+
+        self.encoder = nn.ModuleList([Encoder(d_model, num_heads, dim_feedforward, dropout) for _ in range(num_layers)])
+        self.decoder = nn.ModuleList([Decoder(d_model, num_heads, dim_feedforward, dropout) for _ in range(num_layers)])
+        
         self.classifier = nn.Linear(in_size, out_size)
+        self.dropout = nn.Dropout(dropout)
+
         self.init_weights()
 
     def init_weights(self):
         """
         Initialize the weights and biases of the classifier linear layer:
-
         - Set the bias of the classifier linear layer to zero.
         - Initialize the weights with values drawn from a Xavier uniform distribution.
-        """ 
+        """
         self.classifier.bias.data.zero_()
         nn.init.xavier_uniform_(self.classifier.weight.data)
         
-    def forward(self, x, mask=None):
+    def forward(self, src, tgt):
         """
         Forward pass of the transformer model.
 
-        :param x: input tensor
-        :return: output tensor
+        :param src: tensor (batch_size, seq_length, d_model)
+        :param tgt: tensor (batch_size, seq_length, d_model)
+        :return: tensor (batch_size, seq_length, out_size)
         """
-        
-        x = self.encoder(src=x)
-        x = self.decoder(tgt=x)
+        src = self.enc_embedding(src)
+        src = self.dropout(src)
+                                             
+        for enc_layer in self.encoder:
+            src = enc_layer(src=src)
 
-        x = self.classifier(input=x)
+        tgt = self.dec_embedding(tgt)
+        tgt = self.dropout(tgt)
 
-        return x
+        for dec_layer in self.decoder:
+            tgt = dec_layer(src, tgt)
+
+        output = self.classifier(tgt)
+
+        return output
