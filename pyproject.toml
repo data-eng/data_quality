@@ -19,10 +19,11 @@ mne = "^1.7"
 yasa = "^0.6.4"
 librosa = "^0.10.2.post1"
 torch = "^2.0.1"
+seaborn = "^0.13.2"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-main = "timeseries.main:main"
+train = "timeseries.train:main"
