@@ -1,7 +1,11 @@
 import os
+import json
 import logging
+import torch
+import torch.nn as nn
 import torch.optim as optim
 import torch.optim.lr_scheduler as sched
+import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 import seaborn as sns
@@ -140,3 +144,48 @@ def visualize(type, values, labels, title, plot_func=None, coloring=None, names=
     filename = f"{title.lower().replace(' ', '_')}.png"
     plt.savefig(os.path.join(path, filename), dpi=300)
     plt.close()
+
+def save_json(data, filename):
+    """
+    Save data to a JSON file.
+    :param data: dictionary
+    :param filename: str
+    """
+    with open(filename, 'w') as f:
+        json.dump(data, f)
+
+class WeightedCrossEntropyLoss(nn.Module):
+    def __init__(self, weights):
+        """
+        Initialize the WeightedCrossEntropyLoss module.
+
+        :param weights: dictionary
+        """
+        super(WeightedCrossEntropyLoss, self).__init__()
+        self.weights = self.get_weights(weights)
+
+    def get_weights(self, weights):
+        """
+        Extract weights from the given dictionary and convert them to a tensor.
+
+        :param weights: dictionary
+        :return: tensor
+        """
+        weights = [weights[i] for i in range(len(weights))]
+
+        return torch.tensor(weights, dtype=torch.float)
+
+    def forward(self, pred, true):
+        """
+        Compute the weighted cross-entropy loss.
+
+        :param pred: tensor (batch_size * seq_len, num_classes)
+        :param true: tensor (batch_size * seq_len)
+        :return: tensor
+        """
+        if true.size(0) == 0 or pred.size(0) == 0:
+            return torch.tensor(0.0, requires_grad=True, device=pred.device)
+
+        loss = F.cross_entropy(pred, true, weight=self.weights.to(pred.device))
+
+        return loss

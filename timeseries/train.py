@@ -46,6 +46,8 @@ def train(data, classes, epochs, patience, lr, criterion, model, optimizer, sche
             X, y = X.to(device), y.to(device)
             y_pred = model(X)
 
+            print("HIIIIIIIIIIIIII: ", y_pred)
+
             batch_size, seq_len, _ = y_pred.size()
 
             y_pred = y_pred.reshape(batch_size * seq_len, num_classes)
@@ -146,10 +148,12 @@ def main():
 
     datapaths = split_data(dir=npz_dir, train_size=2, val_size=1, test_size=1)
     
-    dataframes = create_dataframes(datapaths, exist=True)
-    datasets = create_datasets(dataframes, seq_len=7680)
+    train_df, val_df, _ = create_dataframes(datapaths, exist=True)
+    weights = extract_weights(df=train_df, label_col='Consensus')
 
-    train_dl, val_dl, _ = create_dataloaders(datasets, batch_size=8)
+    datasets = create_datasets(dataframes=(train_df, val_df), seq_len=7680)
+
+    dataloaders = create_dataloaders(datasets, batch_size=8)
 
     model = Transformer(in_size=3,
                         out_size=len(classes),
@@ -159,12 +163,12 @@ def main():
                         dim_feedforward=2048,
                         dropout=0)
     
-    train(data=(train_dl, val_dl),
+    train(data=dataloaders,
           classes=classes,
           epochs=2,
           patience=30,
           lr=5e-4,
-          criterion=nn.CrossEntropyLoss(),
+          criterion=utils.WeightedCrossEntropyLoss(weights),
           model=model,
           optimizer="AdamW",
           scheduler=("StepLR", 1.0, 0.98),
