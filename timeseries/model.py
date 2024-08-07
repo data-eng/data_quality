@@ -9,6 +9,9 @@ class MultiHeadAttention(nn.Module):
 
         :param d_model: dimension of the input and output features
         :param num_heads: number of attention heads
+
+        The module computes attention weights with shape torch.Size([batch_size, num_heads, seq_length, seq_length]), 
+        which can be accessed as model.encoder[layer_id].self_attn.attn_weights.
         """
         super(MultiHeadAttention, self).__init__()
 
@@ -22,6 +25,8 @@ class MultiHeadAttention(nn.Module):
         self.W_k = nn.Linear(d_model, d_model)
         self.W_v = nn.Linear(d_model, d_model)
         self.W_o = nn.Linear(d_model, d_model)
+
+        self.attn_weights = None
         
     def attention_scores(self, Q, K, V):
         """
@@ -38,6 +43,8 @@ class MultiHeadAttention(nn.Module):
         attn_scores = dot_product / scaling_factor
 
         attn_probs = torch.softmax(attn_scores, dim=-1)
+        self.attn_weights = attn_probs
+
         attn_scores = torch.matmul(attn_probs, V)
 
         return attn_scores
@@ -171,7 +178,7 @@ class Transformer(nn.Module):
         """
         super(Transformer, self).__init__()
 
-        self.embedding = nn.Embedding(in_size, d_model)
+        self.embedding = nn.Linear(in_size, d_model)
 
         self.encoder = nn.ModuleList([Encoder(d_model, num_heads, dim_feedforward, dropout) for _ in range(num_layers)])
         
@@ -193,10 +200,10 @@ class Transformer(nn.Module):
         """
         Forward pass of the transformer model.
 
-        :param x: tensor (batch_size, seq_length, d_model)
+        :param x: tensor (batch_size, seq_length, in_size)
         :return: tensor (batch_size, seq_length, out_size)
         """
-        x = self.enc_embedding(x)
+        x = self.embedding(x)
         x = self.dropout(x)
                                              
         for enc_layer in self.encoder:

@@ -51,7 +51,7 @@ class TSDataset(Dataset):
         X = self.X.iloc[start_idx:end_idx].values
         y = self.y.iloc[start_idx:end_idx].values
 
-        X, y = torch.FloatTensor(X), torch.FloatTensor(y)
+        X, y = torch.FloatTensor(X), torch.LongTensor(y)
 
         return X, y
     

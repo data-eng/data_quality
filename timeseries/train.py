@@ -70,7 +70,7 @@ def train(data, classes, epochs, patience, lr, criterion, model, optimizer, sche
 
         with torch.no_grad():
             for X, y in val_data:
-                X, y = X.to(device), y.long().to(device)
+                X, y = X.to(device), y.to(device)
                 y_pred = model(X)
 
                 batch_size, seq_len, _ = y_pred.size()
