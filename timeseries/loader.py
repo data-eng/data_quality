@@ -175,11 +175,32 @@ def create_dataframes(paths, exist=False):
 
     return tuple(dataframes)
 
+def extract_weights(df, label_col):
+    """
+    Calculate class weights from the training dataframe to handle class imbalance.
+
+    :param df: dataframe containing the training data
+    :param label_col: the name of the column containing class labels
+    :return: dictionary
+    """
+    logger.info("Calculating class weights from the training dataframe.")
+
+    occs = df[label_col].value_counts().to_dict()
+    inverse_occs = {int(key): 1 / value for key, value in occs.items()}
+
+    weights = {key: value / sum(inverse_occs.values()) for key, value in inverse_occs.items()}
+    weights = dict(sorted(weights.items()))
+
+    path = utils.get_path('data', filename='weights.json')
+    utils.save_json(data=weights, filename=path)
+
+    return weights
+
 def create_datasets(dataframes, seq_len=7680):
     """
-    Create datasets for training, validation, and testing.
+    Create datasets for the specified dataframes, e.g. training, validation and testing, or a subset of those.
 
-    :param dataframes: training, validation and test dataframes
+    :param dataframes: tuple of dataframes
     :param seq_len: length of the input sequence
     :return: tuple of datasets
     """
@@ -199,9 +220,9 @@ def create_datasets(dataframes, seq_len=7680):
 
 def create_dataloaders(datasets, batch_size=8, num_workers=None, shuffle=[True, False, False]):
     """
-    Create dataloaders for training, validation, and testing.
+    Create dataloaders for the specified datasets, e.g. training, validation and testing, or a subset of those.
 
-    :param datasets: training, validation and test datasets
+    :param datasets: tuple of datasets
     :param batch_size: batch size for the dataloaders
     :param num_workers: number of subprocesses to use for data loading
     :param shuffle: whether to shuffle the data

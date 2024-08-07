@@ -2293,4 +2293,4 @@ tensorpac = ">=0.6.5"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "8f5f7177ee61022bec8ac975e43ccbfbf59febe43d4d74368ef5566385425837"
+content-hash = "bad48868694bdc50fd979abc17d4c0a0ae01be5d3ec5bf1d00c6155875584a84"

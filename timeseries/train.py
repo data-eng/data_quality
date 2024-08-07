@@ -46,8 +46,6 @@ def train(data, classes, epochs, patience, lr, criterion, model, optimizer, sche
             X, y = X.to(device), y.to(device)
             y_pred = model(X)
 
-            print("HIIIIIIIIIIIIII: ", y_pred)
-
             batch_size, seq_len, _ = y_pred.size()
 
             y_pred = y_pred.reshape(batch_size * seq_len, num_classes)
@@ -145,19 +143,20 @@ def train(data, classes, epochs, patience, lr, criterion, model, optimizer, sche
 def main():
     classes = ['W','R','N1','N2','N3']
     npz_dir = utils.get_dir('data', 'npz')
+    seq_len = 7680 // 60
 
     datapaths = split_data(dir=npz_dir, train_size=2, val_size=1, test_size=1)
     
     train_df, val_df, _ = create_dataframes(datapaths, exist=True)
     weights = extract_weights(df=train_df, label_col='Consensus')
 
-    datasets = create_datasets(dataframes=(train_df, val_df), seq_len=7680)
+    datasets = create_datasets(dataframes=(train_df, val_df), seq_len=seq_len)
 
-    dataloaders = create_dataloaders(datasets, batch_size=8)
+    dataloaders = create_dataloaders(datasets, batch_size=256)
 
     model = Transformer(in_size=3,
                         out_size=len(classes),
-                        d_model=512,
+                        d_model=64,
                         num_heads=1,
                         num_layers=2,
                         dim_feedforward=2048,
