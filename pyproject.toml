@@ -26,4 +26,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-train = "timeseries.train:main"
+train = "timeseries.transformer.train:main"
