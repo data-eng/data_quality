@@ -1,4 +1,3 @@
-import torch
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
@@ -112,7 +111,10 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
 
 def main():
     npz_dir = utils.get_dir('data', 'npz')
-    seq_len = 7680 // 32
+    
+    samples, chunks = 7680, 32
+    seq_len = samples // chunks
+
     datapaths = split_data(dir=npz_dir, train_size=1, val_size=1, test_size=1)
     
     train_df, val_df, _ = get_dataframes(datapaths, rate=seq_len, exist=False)

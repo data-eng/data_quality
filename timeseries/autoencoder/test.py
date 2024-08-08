@@ -38,7 +38,10 @@ def test(data, criterion, model):
 
 def main():
     npz_dir = utils.get_dir('data', 'npz')
-    seq_len = 7680 // 32
+    
+    samples, chunks = 7680, 32
+    seq_len = samples // chunks
+    
     datapaths = split_data(dir=npz_dir, train_size=1, val_size=1, test_size=1)
     
     _, _, test_df = get_dataframes(datapaths, rate=seq_len, exist=False)

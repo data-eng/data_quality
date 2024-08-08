@@ -5,7 +5,7 @@ import numpy as np
 from torch.utils.data import Dataset, DataLoader
 import os
 
-from . import utils
+from .. import utils
 
 logger = utils.get_logger(level='DEBUG')
 
@@ -114,7 +114,7 @@ def load_file(path):
 
     return X, y, fs, label
 
-def combine_data(paths):
+def combine_data(paths, rate):
     """
     Combine data from multiple npz files into a dataframe.
 
@@ -138,14 +138,18 @@ def combine_data(paths):
             df['Consensus'] = y[epoch, 3]
             df['Time'] = np.arange(1, samples_per_epoch + 1)
 
+            df['ID'] = (df['Time'] - 1) // rate + 1
+
             dataframes.append(df)
 
     df = pd.concat(dataframes, ignore_index=True)
     logger.info(f"Combined dataframe shape: {df.shape}")
 
+    df = utils.normalize(df, exclude=['Consensus', 'Time', 'ID'])
+
     return df
 
-def create_dataframes(paths, exist=False):
+def get_dataframes(paths, rate=240, exist=False):
     """
     Create or load dataframes for training, validation, and testing.
 
@@ -159,13 +163,13 @@ def create_dataframes(paths, exist=False):
     logger.info("Creating dataframes for training, validation, and testing.")
 
     for paths, name in zip(paths, names):
-        csv_path = utils.get_path('..', 'data', 'csv', filename=f"{name}.csv")
+        csv_path = utils.get_path('data', 'csv', filename=f"{name}.csv")
 
         if exist:
             df = pd.read_csv(csv_path)
             logger.info(f"Loaded existing dataframe from {csv_path}.")
         else:
-            df = combine_data(paths)
+            df = combine_data(paths, rate)
             df.to_csv(csv_path, index=False)
             logger.info(f"Saved new dataframe to {csv_path}.")
 
@@ -191,7 +195,7 @@ def extract_weights(df, label_col):
     weights = {key: value / sum(inverse_occs.values()) for key, value in inverse_occs.items()}
     weights = dict(sorted(weights.items()))
 
-    path = utils.get_path('..', 'data', filename='weights.json')
+    path = utils.get_path('data', filename='weights.json')
     utils.save_json(data=weights, filename=path)
 
     return weights
