@@ -38,7 +38,6 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
         progress_bar = tqdm(enumerate(train_data), total=batches, desc=f"Epoch {epoch + 1}/{epochs}", leave=True)
 
         for _, (X, _) in progress_bar:
-        #for _, (X, _) in enumerate(train_data):
             X = X[:, :, :2].to(device)
 
             X_dec, _ = model(X)
@@ -107,7 +106,7 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
                         plot_func=plt.plot,
                         coloring=['brown', 'royalblue'],
                         names=['Training', 'Validation'],
-                        path=utils.get_dirs('static', 'autoencoder'))
+                        path=utils.get_dir('static', 'autoencoder'))
 
     logger.info(f'\nTraining complete!\nFinal Training Loss: {avg_train_loss:.6f} & Validation Loss: {best_val_loss:.6f}\n')
 
