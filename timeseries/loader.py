@@ -5,7 +5,7 @@ import numpy as np
 from torch.utils.data import Dataset, DataLoader
 import os
 
-from .. import utils
+from . import utils
 
 logger = utils.get_logger(level='DEBUG')
 
