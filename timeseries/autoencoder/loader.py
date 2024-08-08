@@ -114,7 +114,7 @@ def load_file(path):
 
     return X, y, fs, label
 
-def combine_data(paths):
+def combine_data(paths, rate):
     """
     Combine data from multiple npz files into a dataframe.
 
@@ -138,16 +138,18 @@ def combine_data(paths):
             df['Consensus'] = y[epoch, 3]
             df['Time'] = np.arange(1, samples_per_epoch + 1)
 
+            df['ID'] = (df['Time'] - 1) // rate + 1
+
             dataframes.append(df)
 
     df = pd.concat(dataframes, ignore_index=True)
     logger.info(f"Combined dataframe shape: {df.shape}")
 
-    df = utils.normalize(df, exclude=['Consensus', 'Time'])
+    df = utils.normalize(df, exclude=['Consensus', 'Time', 'ID'])
 
     return df
 
-def get_dataframes(paths, exist=False):
+def get_dataframes(paths, rate=240, exist=False):
     """
     Create or load dataframes for training, validation, and testing.
 
@@ -167,7 +169,7 @@ def get_dataframes(paths, exist=False):
             df = pd.read_csv(csv_path)
             logger.info(f"Loaded existing dataframe from {csv_path}.")
         else:
-            df = combine_data(paths)
+            df = combine_data(paths, rate)
             df.to_csv(csv_path, index=False)
             logger.info(f"Saved new dataframe to {csv_path}.")
 

@@ -113,9 +113,9 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
 def main():
     npz_dir = utils.get_dir('data', 'npz')
     seq_len = 7680 // 32
-    datapaths = split_data(dir=npz_dir, train_size=57, val_size=1, test_size=1)
+    datapaths = split_data(dir=npz_dir, train_size=1, val_size=1, test_size=1)
     
-    train_df, val_df, _ = get_dataframes(datapaths, exist=False)
+    train_df, val_df, _ = get_dataframes(datapaths, rate=seq_len, exist=False)
 
     datasets = create_datasets(dataframes=(train_df, val_df), seq_len=seq_len)
 
