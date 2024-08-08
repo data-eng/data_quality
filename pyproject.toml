@@ -27,4 +27,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 train_transformer = "timeseries.transformer.train:main"
-train_autoencoder = "timeseries.autoencoder.train.main"
+train_autoencoder = "timeseries.autoencoder.train:main"
