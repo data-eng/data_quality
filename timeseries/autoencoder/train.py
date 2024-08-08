@@ -37,9 +37,6 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
 
         total_train_loss = 0.0
 
-        raw_signals = []
-        dec_signals = []
-
         for _, (X, _) in enumerate(train_data):
             X = X[:, :, :2].to(device)
 
@@ -51,9 +48,6 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
             optimizer.step()
 
             total_train_loss += train_loss.item()
-
-            raw_signals.append(X.cpu().detach().numpy())
-            dec_signals.append(X_dec.cpu().detach().numpy())
 
         avg_train_loss = total_train_loss / batches
         train_losses.append(avg_train_loss)
@@ -72,9 +66,6 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
 
         avg_val_loss = total_val_loss / batches
         val_losses.append(avg_val_loss)
-
-        raw_signals = np.concatenate(raw_signals, axis=0)
-        dec_signals = np.concatenate(dec_signals, axis=0)
 
         logger.info(f'Epoch [{epoch + 1}/{epochs}], Training Loss: {avg_train_loss:.6f}, Validation Loss: {avg_val_loss:.6f}')
 
