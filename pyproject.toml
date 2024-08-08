@@ -20,6 +20,7 @@ yasa = "^0.6.4"
 librosa = "^0.10.2.post1"
 torch = "^2.0.1"
 seaborn = "^0.13.2"
+tqdm = "^4.66.2"
 
 [build-system]
 requires = ["poetry-core"]

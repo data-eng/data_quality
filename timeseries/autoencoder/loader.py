@@ -143,6 +143,8 @@ def combine_data(paths):
     df = pd.concat(dataframes, ignore_index=True)
     logger.info(f"Combined dataframe shape: {df.shape}")
 
+    df = utils.normalize(df, exclude=['Consensus', 'Time'])
+
     return df
 
 def get_dataframes(paths, exist=False):
@@ -159,7 +161,7 @@ def get_dataframes(paths, exist=False):
     logger.info("Creating dataframes for training, validation, and testing.")
 
     for paths, name in zip(paths, names):
-        csv_path = utils.get_path('..', 'data', 'csv', filename=f"{name}.csv")
+        csv_path = utils.get_path('data', 'csv', filename=f"{name}.csv")
 
         if exist:
             df = pd.read_csv(csv_path)
@@ -191,7 +193,7 @@ def extract_weights(df, label_col):
     weights = {key: value / sum(inverse_occs.values()) for key, value in inverse_occs.items()}
     weights = dict(sorted(weights.items()))
 
-    path = utils.get_path('..', 'data', filename='weights.json')
+    path = utils.get_path('data', filename='weights.json')
     utils.save_json(data=weights, filename=path)
 
     return weights

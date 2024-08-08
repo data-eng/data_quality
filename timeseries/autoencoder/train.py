@@ -1,5 +1,5 @@
 import torch
-import numpy as np
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 from .. import utils
@@ -7,8 +7,6 @@ from .loader import *
 from .model import *
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-logger = utils.get_logger(level='DEBUG')
 logger.info(f'Device is {device}')
 
 def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, visualize=False):
@@ -37,7 +35,10 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
 
         total_train_loss = 0.0
 
-        for _, (X, _) in enumerate(train_data):
+        progress_bar = tqdm(enumerate(train_data), total=batches, desc=f"Epoch {epoch + 1}/{epochs}", leave=True)
+
+        for _, (X, _) in progress_bar:
+        #for _, (X, _) in enumerate(train_data):
             X = X[:, :, :2].to(device)
 
             X_dec, _ = model(X)
@@ -48,6 +49,7 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
             optimizer.step()
 
             total_train_loss += train_loss.item()
+            progress_bar.set_postfix(Loss=train_loss.item())
 
         avg_train_loss = total_train_loss / batches
         train_losses.append(avg_train_loss)
@@ -75,7 +77,7 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
 
             logger.info(f'New best val found! ~ Epoch [{epoch + 1}/{epochs}], Val Loss {avg_val_loss}')
 
-            path = utils.get_path('..', 'models', filename='autoencoder.pth')
+            path = utils.get_path('models', filename='autoencoder.pth')
             torch.save(model.state_dict(), path)
 
             checkpoints.update({
@@ -93,7 +95,7 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
 
         scheduler.step()
 
-    cfn = utils.get_path('..', 'static', 'autoencoder', filename='train_checkpoints.json')
+    cfn = utils.get_path('static', 'autoencoder', filename='train_checkpoints.json')
     checkpoints.update({'epochs': epoch + 1})
     utils.save_json(data=checkpoints, filename=cfn)
     
@@ -105,20 +107,20 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
                         plot_func=plt.plot,
                         coloring=['brown', 'royalblue'],
                         names=['Training', 'Validation'],
-                        path=utils.get_dirs('..', 'static', 'autoencoder'))
+                        path=utils.get_dirs('static', 'autoencoder'))
 
     logger.info(f'\nTraining complete!\nFinal Training Loss: {avg_train_loss:.6f} & Validation Loss: {best_val_loss:.6f}\n')
 
 def main():
-    npz_dir = utils.get_dir('..', 'data', 'npz')
+    npz_dir = utils.get_dir('data', 'npz')
     seq_len = 7680 // 32
-    datapaths = split_data(dir=npz_dir, train_size=2, val_size=1, test_size=1)
+    datapaths = split_data(dir=npz_dir, train_size=57, val_size=1, test_size=1)
     
-    train_df, val_df, _ = get_dataframes(datapaths, exist=True)
+    train_df, val_df, _ = get_dataframes(datapaths, exist=False)
 
     datasets = create_datasets(dataframes=(train_df, val_df), seq_len=seq_len)
 
-    dataloaders = create_dataloaders(datasets, batch_size=64)
+    dataloaders = create_dataloaders(datasets, batch_size=512)
 
     model = Autoencoder(seq_len=240,
                         num_feats=2, 
@@ -131,7 +133,7 @@ def main():
           epochs=2,
           patience=30,
           lr=5e-4,
-          criterion=nn.L1Loss(),
+          criterion=nn.MSELoss(),
           model=model,
           optimizer='AdamW',
           scheduler=('StepLR', 1.0, 0.98),

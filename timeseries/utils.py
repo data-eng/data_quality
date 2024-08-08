@@ -189,3 +189,43 @@ class WeightedCrossEntropyLoss(nn.Module):
         loss = F.cross_entropy(pred, true, weight=self.weights.to(pred.device))
 
         return loss
+    
+def normalize(df, exclude):
+    """
+    Normalize data.
+
+    :param df: dataframe
+    :param exclude: columns to exclude from normalization
+    :return: processed dataframe
+    """
+    newdf = df.copy()
+    stats = get_stats(df)
+
+    for col in df.columns:
+        if col not in exclude:
+            series = df[col]
+            mean, std = stats[col]
+            series = (series - mean) / std
+            newdf[col] = series
+
+    return newdf
+
+def get_stats(df):
+    """
+    Compute mean and standard deviation for each column in the dataframe.
+
+    :param df: dataframe
+    :return: dictionary
+    """
+    stats = {}
+
+    for col in df.columns:
+        series = df[col]
+        mean = series.mean()
+        std = series.std()
+        stats[col] = (mean, std)
+
+    path = get_path('data', filename='stats.json')
+    save_json(data=stats, filename=path)
+
+    return stats
