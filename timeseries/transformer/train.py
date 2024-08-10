@@ -31,7 +31,7 @@ def autoencode(X, y):
 
     return X, y
     
-def train(data, classes, chunks, epochs, patience, lr, criterion, model, optimizer, scheduler, visualize=False):
+def train(data, classes, chunks, epochs, patience, batch_size, lr, criterion, model, optimizer, scheduler, visualize=False):
     model.to(device)
 
     train_data, val_data = data
@@ -39,7 +39,7 @@ def train(data, classes, chunks, epochs, patience, lr, criterion, model, optimiz
     batches = len(train_data)
     num_classes = len(classes)
 
-    logger.info(f"Number of training iterations per epoch: {batches // chunks}.")
+    logger.info(f"Number of training iterations per epoch: {batches // (chunks * batch_size)}.")
 
     optimizer = utils.get_optim(optimizer, model, lr)
     scheduler = utils.get_sched(*scheduler, optimizer)
@@ -67,57 +67,74 @@ def train(data, classes, chunks, epochs, patience, lr, criterion, model, optimiz
 
         model.train()
 
-        c = 1
+        c, b = 1, 1
         total_train_loss = 0.0
         true_values, pred_values = [], []
-        X_trans, y_trans = [], []
+        X_c, y_c, X_b, y_b = [], [], [], []
 
-        #progress_bar = tqdm(enumerate(train_data), total=batches, desc=f"Epoch {epoch + 1}/{epochs}", leave=True)
+        progress_bar = tqdm(enumerate(train_data), total=batches, desc=f"Epoch {epoch + 1}/{epochs}", leave=True)
 
-        for i, (X, y) in enumerate(train_data):
-        #for i, (X, y) in progress_bar:
+        #for i, (X, y) in enumerate(train_data):
+        for i, (X, y) in progress_bar:
             X, y = X.to(device), y.to(device)
 
             X, y = autoencode(X, y)
 
-            X_trans.append(X)
-            y_trans.append(y)
+            X_c.append(X)
+            y_c.append(y)
 
             if c == chunks or i == len(train_data) - 1:
-                X = torch.cat(X_trans, dim=1)
-                y = torch.cat(y_trans, dim=1)
+                X = torch.cat(X_c, dim=1)
+                y = torch.cat(y_c, dim=1)
 
-                y_pred = model(X)
+                X_b.append(X)
+                y_b.append(y)
 
-                batch_size, seq_len, _ = y_pred.size()
+                if b == batch_size:
+                    X = torch.cat(X_b, dim=0)
+                    y = torch.cat(y_b, dim=0)
 
-                y_pred = y_pred.reshape(batch_size * seq_len, num_classes)
-                y = y.reshape(batch_size * seq_len)
+                    perm = torch.randperm(X.size(0))
+                    X, y = X[perm], y[perm]
+   
+                    y_pred = model(X)
 
-                train_loss = criterion(y_pred, y)
+                    batch_size, seq_len, _ = y_pred.size()
+                    assert b == batch_size, f"Batch size mismatch: expected {b}, got {batch_size}"
 
-                optimizer.zero_grad()
-                train_loss.backward()
-                optimizer.step()
+                    y_pred = y_pred.reshape(batch_size * seq_len, num_classes)
+                    y = y.reshape(batch_size * seq_len)
 
-                c, X_trans, y_trans = 0, [], []
+                    train_loss = criterion(y_pred, y)
 
-                total_train_loss += train_loss.item()
-                #progress_bar.set_postfix(Loss=train_loss.item())
+                    optimizer.zero_grad()
+                    train_loss.backward()
+                    optimizer.step()
 
-                true_values.append(y.cpu().numpy())
-                pred_values.append(y_pred.detach().cpu().numpy())
+                    total_train_loss += train_loss.item()
+                    progress_bar.set_postfix(Loss=train_loss.item())
 
-            c += 1
+                    true_values.append(y.cpu().numpy())
+                    pred_values.append(y_pred.detach().cpu().numpy())
+
+                    b, X_b, y_b = 1, [], []
+
+                else:
+                    b += 1
+
+                c, X_c, y_c = 1, [], []
+
+            else:
+                c += 1
 
         avg_train_loss = total_train_loss / batches
         train_losses.append(avg_train_loss)
 
         model.eval()
 
-        c = 1
+        c, b = 1, 1
         total_val_loss = 0.0
-        X_trans, y_trans = [], []
+        X_c, y_c, X_b, y_b = [], [], [], []
 
         with torch.no_grad():
             for j, (X, y) in enumerate(val_data):
@@ -125,26 +142,43 @@ def train(data, classes, chunks, epochs, patience, lr, criterion, model, optimiz
 
                 X, y = autoencode(X, y)
 
-                X_trans.append(X)
-                y_trans.append(y)
+                X_c.append(X)
+                y_c.append(y)
 
                 if c == chunks or j == len(val_data) - 1:
-                    X = torch.cat(X_trans, dim=1)
-                    y = torch.cat(y_trans, dim=1)
+                    X = torch.cat(X_c, dim=1)
+                    y = torch.cat(y_c, dim=1)
 
-                    y_pred = model(X)
+                    X_b.append(X)
+                    y_b.append(y)
 
-                    batch_size, seq_len, _ = y_pred.size()
+                    if b == batch_size:
+                        X = torch.cat(X_b, dim=0)
+                        y = torch.cat(y_b, dim=0)
 
-                    y_pred = y_pred.reshape(batch_size * seq_len, num_classes)
-                    y = y.reshape(batch_size * seq_len)
+                        perm = torch.randperm(X.size(0))
+                        X, y = X[perm], y[perm]
 
-                    val_loss = criterion(pred=y_pred, true=y)
-                    total_val_loss += val_loss.item()
+                        y_pred = model(X)
 
-                    c, X_trans, y_trans = 0, [], []
+                        batch_size, seq_len, _ = y_pred.size()
+                        assert b == batch_size, f"Batch size mismatch: expected {b}, got {batch_size}"
 
-                c += 1
+                        y_pred = y_pred.reshape(batch_size * seq_len, num_classes)
+                        y = y.reshape(batch_size * seq_len)
+
+                        val_loss = criterion(pred=y_pred, true=y)
+                        total_val_loss += val_loss.item()
+
+                        b, X_b, y_b = 1, [], []
+
+                    else:
+                        b += 1
+
+                    c, X_c, y_c = 1, [], []
+
+                else:
+                    c += 1
         
         avg_val_loss = total_val_loss / batches
         val_losses.append(avg_val_loss)
@@ -222,7 +256,7 @@ def main():
 
     datasets = create_datasets(dataframes=(train_df, val_df), seq_len=seq_len)
 
-    dataloaders = create_dataloaders(datasets, batch_size=32, drop_last=False)
+    dataloaders = create_dataloaders(datasets, batch_size=1, shuffle=[False, False, False], drop_last=False)
 
     model = Transformer(in_size=9,
                         out_size=len(classes),
@@ -237,6 +271,7 @@ def main():
           classes=classes,
           epochs=1,
           patience=30,
+          batch_size=512,
           lr=5e-4,
           criterion=utils.WeightedCrossEntropyLoss(weights),
           model=model,
