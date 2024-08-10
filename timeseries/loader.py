@@ -26,7 +26,7 @@ class TSDataset(Dataset):
         self.y = df[y]
         self.per_epoch = per_epoch
 
-        logger.info(f"Initializing dataset with seq_len={seq_len}, samples={self.num_samples}, sequences={self.num_seqs}")
+        logger.info(f"Initializing dataset with: samples={self.num_samples}, samples/seq={seq_len}, seqs={self.num_seqs}, epochs={self.num_epochs} ")
 
     def __len__(self):
         """
@@ -58,6 +58,10 @@ class TSDataset(Dataset):
     @property
     def num_samples(self):
         return self.X.shape[0]
+    
+    @property
+    def num_epochs(self):
+        return self.num_samples // 7680
 
     @property
     def max_seq_id(self):
@@ -190,7 +194,10 @@ def extract_weights(df, label_col):
     logger.info("Calculating class weights from the training dataframe.")
 
     occs = df[label_col].value_counts().to_dict()
-    inverse_occs = {int(key): 1 / value for key, value in occs.items()}
+    inverse_occs = {key: 1e-10 for key in range(5)}
+
+    for key, value in occs.items():
+        inverse_occs[int(key)] = 1 / (value + 1e-10)
 
     weights = {key: value / sum(inverse_occs.values()) for key, value in inverse_occs.items()}
     weights = dict(sorted(weights.items()))
@@ -210,7 +217,7 @@ def create_datasets(dataframes, seq_len=7680):
     """
 
     datasets = []
-    X, t, y = ["HB_1", "HB_2"], ["Time"], ["Consensus"]
+    X, t, y = ["HB_1", "HB_2"], ["Time", "ID"], ["Consensus"]
 
     logger.info("Creating datasets from dataframes.") 
 
@@ -222,9 +229,18 @@ def create_datasets(dataframes, seq_len=7680):
 
     return tuple(datasets)
 
-def create_dataloaders(datasets, batch_size=8, num_workers=None, shuffle=[True, False, False]):
+def create_dataloaders(datasets, batch_size=1, shuffle=[True, False, False], num_workers=None, drop_last=False):
     """
     Create dataloaders for the specified datasets, e.g. training, validation and testing, or a subset of those.
+
+    The batch size should be 1, 2, 4, 8, 16, or 32, as these values ensure that all sequences are distributed 
+    across batches (batch_size must divide evenly: num_seqs = 7680 * epochs / 240 = 32 * epochs). This prevents 
+    the number of sequences in the last batch from being smaller than the batch size.
+
+    The number of batches is determined by num_seqs / batch_size. Additionally, aggr = 32 should ideally divide 
+    batches evenly: (7680 * epochs) / (240 * batch_size * 32). Therefore, the batch size must be 1 if we want the 
+    transformer model to receive input with a fixed seq_len=aggr. Otherwise, any of the batch sizes listed above 
+    should be fine. The model works well with input X being (batch_size, smaller_seq_len, num_feats).
 
     :param datasets: tuple of datasets
     :param batch_size: batch size for the dataloaders
@@ -241,14 +257,52 @@ def create_dataloaders(datasets, batch_size=8, num_workers=None, shuffle=[True, 
     logger.info(f"System has {cpu_cores} CPU cores. Using {num_workers}/{cpu_cores} workers for data loading.")
     
     for dataset, shuffle in zip(datasets, shuffle):
+        num_batches = dataset.num_seqs // batch_size
+
         dataloader = DataLoader(
             dataset=dataset,
             batch_size=batch_size,
             shuffle=shuffle,
-            num_workers=num_workers
+            num_workers=num_workers,
+            drop_last=drop_last
         )
         dataloaders.append(dataloader)
 
+        logger.info(f"Actual batches={len(dataloader)} & expected batches={num_batches}, with each batch containing {batch_size} sequences.")
+    
     logger.info("DataLoaders created successfully.")
 
     return tuple(dataloaders)
+
+def separate(src, c, t):
+    """
+    Separates channels and time features from the source tensor.
+
+    :param src: tensor (batch_size, seq_len, num_feats)
+    :param c: range of channels features
+    :param t: range of time features
+    :return: tuple of (batch_size, seq_len, num_channels_feats) and (batch_size, seq_len, num_time_feats)
+    """
+    channels = src[:, :, c]
+    time = src[:, :, t]
+
+    return channels, time
+
+def aggregate_seqs(data):
+    """
+    Aggregates the tensor by reducing the sequence length to a single time step.
+
+    :param data: tensor (batch_size, seq_len, num_feats)
+    :return: tensor (batch_size, 1, num_feats)
+    """
+    return data[:, 0:1, :]
+
+def merge(channels, time):
+    """
+    Concatenates channels and time feature tensors along the feature dimension.
+
+    :param channels: tensor (batch_size, seq_len, num_channels_feats)
+    :param time: tensor (batch_size, seq_len, 1)
+    :return: tensor (batch_size, seq_len, num_channels_feats + 1)
+    """
+    return torch.cat((channels, time), dim=2)

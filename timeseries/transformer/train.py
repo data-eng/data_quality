@@ -1,31 +1,33 @@
+import time
+import warnings
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 from .. import utils
-from .loader import *
+from ..loader import *
 from .model import *
-from .. import autoencoder
+from ..autoencoder import autoencoder as Autoencoder
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 logger.info(f'Device is {device}')
 
-def separate():
-    pass
-
-def aggregate():
-    pass
-
-def merge():
-    pass
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 def autoencode(X, y):
-    f, t = separate(src=X, features=[1, 2], time=3)  # f = X[:, :, :2] and X_t = X[:, :, 3]
+    """
+    Applies autoencoder to the input and target tensors.
 
-    _, f = autoencoder(f)  # f is now (batchsize, 1, 8)
-    t = aggregate(t)  # t is now (batchsize, 1, 1)
+    :param X: tensor (batch_size, seq_len, num_feats)
+    :param y: tensor (batch_size, seq_len, 1)
+    :return: tuple of (X, y) tensors
+    """
+    channels, time = separate(src=X, c=[0,1], t=[3])
 
-    X = merge(features=f, time=t)  # X is now (batchsize, 1, 9)
-    y = aggregate(y)  # y is now (batchsize, 1, 1)
+    _, channels = Autoencoder(channels)
+    time = aggregate_seqs(data=time)
+
+    X = merge(channels, time)
+    y = aggregate_seqs(data=y)
 
     return X, y
     
@@ -36,6 +38,8 @@ def train(data, classes, chunks, epochs, patience, lr, criterion, model, optimiz
 
     batches = len(train_data)
     num_classes = len(classes)
+
+    logger.info(f"Number of training iterations per epoch: {batches // chunks}.")
 
     optimizer = utils.get_optim(optimizer, model, lr)
     scheduler = utils.get_sched(*scheduler, optimizer)
@@ -59,6 +63,8 @@ def train(data, classes, chunks, epochs, patience, lr, criterion, model, optimiz
                    'fscore_weighted': 0}
 
     for epoch in range(epochs):
+        start = time.time()
+
         model.train()
 
         c = 1
@@ -66,21 +72,22 @@ def train(data, classes, chunks, epochs, patience, lr, criterion, model, optimiz
         true_values, pred_values = [], []
         X_trans, y_trans = [], []
 
-        progress_bar = tqdm(enumerate(train_data), total=batches, desc=f"Epoch {epoch + 1}/{epochs}", leave=True)
+        #progress_bar = tqdm(enumerate(train_data), total=batches, desc=f"Epoch {epoch + 1}/{epochs}", leave=True)
 
-        for _, (X, y) in progress_bar:
-            X, y = X.to(device), y.to(device)  # X is (batchsize, 240, 2) and y is (batchsize, 240, 1)
+        for i, (X, y) in enumerate(train_data):
+        #for i, (X, y) in progress_bar:
+            X, y = X.to(device), y.to(device)
 
             X, y = autoencode(X, y)
 
             X_trans.append(X)
             y_trans.append(y)
 
-            if c == chunks:
-                X = torch.cat(X_trans, dim=1)  # X is now (batchsize, 32, 9)
-                y = torch.cat(y_trans, dim=1)  # y is now (batchsize, 32, 1)
+            if c == chunks or i == len(train_data) - 1:
+                X = torch.cat(X_trans, dim=1)
+                y = torch.cat(y_trans, dim=1)
 
-                y_pred = model(X) # (batchsize, 32, 1)
+                y_pred = model(X)
 
                 batch_size, seq_len, _ = y_pred.size()
 
@@ -96,7 +103,7 @@ def train(data, classes, chunks, epochs, patience, lr, criterion, model, optimiz
                 c, X_trans, y_trans = 0, [], []
 
                 total_train_loss += train_loss.item()
-                progress_bar.set_postfix(Loss=train_loss.item())
+                #progress_bar.set_postfix(Loss=train_loss.item())
 
                 true_values.append(y.cpu().numpy())
                 pred_values.append(y_pred.detach().cpu().numpy())
@@ -113,7 +120,7 @@ def train(data, classes, chunks, epochs, patience, lr, criterion, model, optimiz
         X_trans, y_trans = [], []
 
         with torch.no_grad():
-            for X, y in val_data:
+            for j, (X, y) in enumerate(val_data):
                 X, y = X.to(device), y.to(device)
 
                 X, y = autoencode(X, y)
@@ -121,9 +128,9 @@ def train(data, classes, chunks, epochs, patience, lr, criterion, model, optimiz
                 X_trans.append(X)
                 y_trans.append(y)
 
-                if c == chunks:
-                    X = torch.cat(X_trans, dim=1)  # X is now (batchsize, 32, 9)
-                    y = torch.cat(y_trans, dim=1)  # y is now (batchsize, 32, 1)
+                if c == chunks or j == len(val_data) - 1:
+                    X = torch.cat(X_trans, dim=1)
+                    y = torch.cat(y_trans, dim=1)
 
                     y_pred = model(X)
 
@@ -147,8 +154,11 @@ def train(data, classes, chunks, epochs, patience, lr, criterion, model, optimiz
 
         true_classes = true_values.tolist()
         pred_classes = [utils.get_max(pred).index for pred in pred_values]
+
+        end = time.time()
+        duration = end - start
         
-        logger.info(f'Epoch [{epoch + 1}/{epochs}], Training Loss: {avg_train_loss:.6f}, Validation Loss: {avg_val_loss:.6f}')
+        logger.info(f'Epoch [{epoch + 1}/{epochs}], Training Loss: {avg_train_loss:.6f}, Validation Loss: {avg_val_loss:.6f}, Duration: {duration:.2f}s')
 
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
@@ -156,7 +166,7 @@ def train(data, classes, chunks, epochs, patience, lr, criterion, model, optimiz
 
             logger.info(f'New best val found! ~ Epoch [{epoch + 1}/{epochs}], Val Loss {avg_val_loss}')
 
-            path = utils.get_path('..', 'models', filename='transformer.pth')
+            path = utils.get_path('models', filename='transformer.pth')
             torch.save(model.state_dict(), path)
 
             checkpoints.update({'best_epoch': epoch+1, 
@@ -171,7 +181,7 @@ def train(data, classes, chunks, epochs, patience, lr, criterion, model, optimiz
                         title='Train Heatmap ',
                         classes=classes,
                         coloring=['azure', 'darkblue'],
-                        path=utils.get_dirs('..', 'static', 'transformer'))
+                        path=utils.get_dir('static', 'transformer'))
                 
         else:
             stationary += 1
@@ -182,7 +192,7 @@ def train(data, classes, chunks, epochs, patience, lr, criterion, model, optimiz
 
         scheduler.step()
 
-    cfn = utils.get_path('..', 'static', 'transformer', filename='train_checkpoints.json')
+    cfn = utils.get_path('static', 'transformer', filename='train_checkpoints.json')
     checkpoints.update({'epochs': epoch+1})
     utils.save_json(data=checkpoints, filename=cfn)
     
@@ -194,27 +204,27 @@ def train(data, classes, chunks, epochs, patience, lr, criterion, model, optimiz
                         plot_func=plt.plot,
                         coloring=['brown', 'royalblue'],
                         names=['Training', 'Validation'],
-                        path=utils.get_dirs('..', 'static', 'transformer'))
+                        path=utils.get_dir('static', 'transformer'))
 
     logger.info(f'\nTraining complete!\nFinal Training Loss: {avg_train_loss:.6f} & Validation Loss: {best_val_loss:.6f}\n')
 
 def main():
     classes = ['W','R','N1','N2','N3']
-    npz_dir = utils.get_dir('..', 'data', 'npz')
+    npz_dir = utils.get_dir('data', 'npz')
 
     samples, chunks = 7680, 32
     seq_len = samples // chunks
 
     datapaths = split_data(dir=npz_dir, train_size=1, val_size=1, test_size=1)
     
-    train_df, val_df, _ = get_dataframes(datapaths, rate=seq_len, exist=False)
+    train_df, val_df, _ = get_dataframes(datapaths, rate=seq_len, exist=True)
     weights = extract_weights(df=train_df, label_col='Consensus')
 
     datasets = create_datasets(dataframes=(train_df, val_df), seq_len=seq_len)
 
-    dataloaders = create_dataloaders(datasets, batch_size=512)
+    dataloaders = create_dataloaders(datasets, batch_size=32, drop_last=False)
 
-    model = Transformer(in_size=3,
+    model = Transformer(in_size=9,
                         out_size=len(classes),
                         d_model=64,
                         num_heads=1,
@@ -225,7 +235,7 @@ def main():
     train(data=dataloaders,
           chunks=chunks,
           classes=classes,
-          epochs=2,
+          epochs=1,
           patience=30,
           lr=5e-4,
           criterion=utils.WeightedCrossEntropyLoss(weights),

@@ -165,7 +165,7 @@ class Encoder(nn.Module):
         return x
     
 class Transformer(nn.Module):
-    def __init__(self, in_size=3, out_size=5, d_model=512, num_heads=1, num_layers=1, dim_feedforward=2048, dropout=0):
+    def __init__(self, in_size=3, out_size=5, d_model=64, num_heads=1, num_layers=1, dim_feedforward=2048, dropout=0):
         """
         Initialize the Transformer model.
 

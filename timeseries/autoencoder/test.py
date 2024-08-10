@@ -3,7 +3,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 from .. import utils
-from .loader import *
+from ..loader import *
 from .model import *
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

@@ -1,5 +1,7 @@
 import os
 import json
+import numpy as np
+from collections import namedtuple
 import logging
 import torch
 import torch.nn as nn
@@ -39,7 +41,7 @@ def get_path(*dirs, filename):
 
     return path
 
-def get_prfs(true, pred, avg=['micro', 'macro', 'weighted'], include_support=False):
+def get_prfs(true, pred, avg=['micro', 'macro', 'weighted'], include_support=False, zero_division=0):
     """
     Calculate precision, recall, fscore and support using the given averaging methods.
 
@@ -52,7 +54,7 @@ def get_prfs(true, pred, avg=['micro', 'macro', 'weighted'], include_support=Fal
     prfs = {}
 
     for method in avg:
-        precision, recall, fscore, support = precision_recall_fscore_support(true, pred, average=method)
+        precision, recall, fscore, support = precision_recall_fscore_support(true, pred, average=method, zero_division=zero_division)
 
         prfs[f'precision_{method}'] = precision
         prfs[f'recall_{method}'] = recall
@@ -229,3 +231,17 @@ def get_stats(df):
     save_json(data=stats, filename=path)
 
     return stats
+
+def get_max(arr):
+    """
+    Get the maximum value and its index from an array.
+
+    :param arr: numpy array
+    :return: namedtuple
+    """
+    Info = namedtuple('Info', ['value', 'index'])
+
+    max_index = np.argmax(arr)
+    max_value = arr[max_index]
+
+    return Info(value=max_value, index=max_index)
