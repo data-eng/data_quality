@@ -31,8 +31,11 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
         'epochs': 0, 
         'best_epoch': 0, 
         'best_train_loss': float('inf'), 
-        'best_val_loss': float('inf')
+        'best_val_loss': float('inf'),
+        'train_time': 0.0 
     }
+
+    train_time = 0.0
 
     for epoch in range(epochs):
         start = time.time()
@@ -81,6 +84,7 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
 
         end = time.time()
         duration = end - start
+        train_time += duration
 
         logger.info(f'Epoch [{epoch + 1}/{epochs}], Training Loss: {avg_train_loss:.6f}, Validation Loss: {avg_val_loss:.6f}, Duration: {duration:.2f}s')
 
@@ -108,8 +112,11 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
 
         scheduler.step()
 
+    checkpoints.update({
+        'epochs': epoch + 1,
+        'train_time': train_time})
+    
     cfn = utils.get_path('static', 'autoencoder', filename='train_checkpoints.json')
-    checkpoints.update({'epochs': epoch + 1})
     utils.save_json(data=checkpoints, filename=cfn)
     
     if visualize:
