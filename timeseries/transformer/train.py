@@ -44,6 +44,7 @@ def train(data, classes, chunks, epochs, patience, batch_size, lr, criterion, mo
     optimizer = utils.get_optim(optimizer, model, lr)
     scheduler = utils.get_sched(*scheduler, optimizer)
 
+    train_time = 0.0
     best_val_loss = float('inf')
     stationary = 0
     train_losses, val_losses = [], []
@@ -60,7 +61,8 @@ def train(data, classes, chunks, epochs, patience, batch_size, lr, criterion, mo
                    'recall_weighted': 0, 
                    'fscore_micro': 0,
                    'fscore_macro': 0, 
-                   'fscore_weighted': 0}
+                   'fscore_weighted': 0,
+                    'train_time': 0.0 }
 
     for epoch in range(epochs):
         start = time.time()
@@ -191,6 +193,7 @@ def train(data, classes, chunks, epochs, patience, batch_size, lr, criterion, mo
 
         end = time.time()
         duration = end - start
+        train_time += duration
         
         logger.info(f'Epoch [{epoch + 1}/{epochs}], Training Loss: {avg_train_loss:.6f}, Validation Loss: {avg_val_loss:.6f}, Duration: {duration:.2f}s')
 
@@ -226,8 +229,11 @@ def train(data, classes, chunks, epochs, patience, batch_size, lr, criterion, mo
 
         scheduler.step()
 
+    checkpoints.update({
+        'epochs': epoch+1,
+        'train_time': train_time})
+    
     cfn = utils.get_path('static', 'transformer', filename='train_checkpoints.json')
-    checkpoints.update({'epochs': epoch+1})
     utils.save_json(data=checkpoints, filename=cfn)
     
     if visualize:
@@ -271,7 +277,7 @@ def main():
           classes=classes,
           epochs=1,
           patience=30,
-          batch_size=512,
+          batch_size=256,
           lr=5e-4,
           criterion=utils.WeightedCrossEntropyLoss(weights),
           model=model,

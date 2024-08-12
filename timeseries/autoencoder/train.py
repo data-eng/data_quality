@@ -23,6 +23,7 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
     optimizer = utils.get_optim(optimizer, model, lr)
     scheduler = utils.get_sched(*scheduler, optimizer)
 
+    train_time = 0.0
     best_val_loss = float('inf')
     stationary = 0
     train_losses, val_losses = [], []
@@ -34,8 +35,6 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
         'best_val_loss': float('inf'),
         'train_time': 0.0 
     }
-
-    train_time = 0.0
 
     for epoch in range(epochs):
         start = time.time()
@@ -51,8 +50,6 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
             X = X.to(device)
 
             X, _ = separate(src=X, c=[0,1], t=[3])
-
-            print("###############    ", X.shape)
             X_dec, _ = model(X)
 
             train_loss = criterion(X_dec, X)
