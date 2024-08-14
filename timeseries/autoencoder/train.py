@@ -147,7 +147,7 @@ def main():
                         latent_seq_len=1, 
                         latent_num_feats=8, 
                         hidden_size=128, 
-                        num_layers=2)
+                        num_layers=1)
     
     train(data=dataloaders,
           epochs=1,
