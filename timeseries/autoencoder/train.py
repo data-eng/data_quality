@@ -111,22 +111,22 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, ma
 
         scheduler.step()
 
-        cfn = utils.get_path('static', 'autoencoder', filename='train_checkpoints.json')
-        utils.save_json(data=checkpoints, filename=cfn)
-
-        if visualize:
-            utils.visualize(type='multi-plot',
-                            values=[(range(1, len(train_losses) + 1), train_losses), (range(1, len(val_losses) + 1), val_losses)], 
-                            labels=('Epoch', 'Loss'), 
-                            title='Loss Curves',
-                            plot_func=plt.plot,
-                            coloring=['brown', 'royalblue'],
-                            names=['Training', 'Validation'],
-                            path=utils.get_dir('static', 'autoencoder'))
-
     checkpoints.update({
         'epochs': epoch + 1,
         'train_time': train_time})
+    
+    cfn = utils.get_path('static', 'autoencoder', filename='train_checkpoints.json')
+    utils.save_json(data=checkpoints, filename=cfn)
+    
+    if visualize:
+        utils.visualize(type='multi-plot',
+                        values=[(range(1, len(train_losses) + 1), train_losses), (range(1, len(val_losses) + 1), val_losses)], 
+                        labels=('Epoch', 'Loss'), 
+                        title='Loss Curves',
+                        plot_func=plt.plot,
+                        coloring=['brown', 'royalblue'],
+                        names=['Training', 'Validation'],
+                        path=utils.get_dir('static', 'autoencoder'))
 
     logger.info(f'\nTraining complete!\nFinal Training Loss: {avg_train_loss:.6f} & Validation Loss: {best_val_loss:.6f}\n')
 
@@ -148,7 +148,7 @@ def main():
                         num_feats=2, 
                         latent_seq_len=1, 
                         latent_num_feats=8, 
-                        hidden_size=128, 
+                        hidden_size=32, 
                         num_layers=1,
                         dropout=0.5)
     
