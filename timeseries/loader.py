@@ -1,4 +1,5 @@
 import torch
+import random
 import multiprocessing
 import pandas as pd
 import numpy as np
@@ -117,6 +118,14 @@ def load_file(path):
     assert X.shape[1] == fs * 30, f"Expected {fs * 30} samples per epoch, but got {X.shape[1]}"
 
     return X, y, fs, label
+
+def get_fs(path):
+    files = [file for sublist in path for file in sublist]
+
+    random_file = random.choice(files)
+    _, _, fs, _ = load_file(random_file)
+
+    return fs[0, 0]
 
 def combine_data(paths, rate):
     """
@@ -257,7 +266,7 @@ def create_dataloaders(datasets, batch_size=1, shuffle=[True, False, False], num
     logger.info(f"System has {cpu_cores} CPU cores. Using {num_workers}/{cpu_cores} workers for data loading.")
     
     for dataset, shuffle in zip(datasets, shuffle):
-        num_batches = dataset.num_seqs // batch_size
+        full_batches = dataset.num_seqs // batch_size
 
         dataloader = DataLoader(
             dataset=dataset,
@@ -268,7 +277,7 @@ def create_dataloaders(datasets, batch_size=1, shuffle=[True, False, False], num
         )
         dataloaders.append(dataloader)
 
-        logger.info(f"Actual batches={len(dataloader)} & expected batches={num_batches}, with each batch containing {batch_size} sequences.")
+        logger.info(f"Total batches={len(dataloader)} & full batches={full_batches}, with each full batch containing {batch_size} sequences.")
     
     logger.info("DataLoaders created successfully.")
 
