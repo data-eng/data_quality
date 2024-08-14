@@ -12,13 +12,13 @@ logger.info(f'Device is {device}')
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, visualize=False):
+def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, max_grad_norm=1.0, visualize=False):
     model.to(device)
 
     train_data, val_data = data
     batches = len(train_data)
 
-    logger.info(f"Number of training iterations per epoch: {batches}.")
+    logger.info(f"Number of training iterations per epoch: {batches}")
 
     optimizer = utils.get_optim(optimizer, model, lr)
     scheduler = utils.get_sched(*scheduler, optimizer)
@@ -55,6 +55,8 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
             train_loss = criterion(X_dec, X)
             optimizer.zero_grad()
             train_loss.backward()
+
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
             optimizer.step()
 
             total_train_loss += train_loss.item()
@@ -109,22 +111,22 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
 
         scheduler.step()
 
+        cfn = utils.get_path('static', 'autoencoder', filename='train_checkpoints.json')
+        utils.save_json(data=checkpoints, filename=cfn)
+
+        if visualize:
+            utils.visualize(type='multi-plot',
+                            values=[(range(1, len(train_losses) + 1), train_losses), (range(1, len(val_losses) + 1), val_losses)], 
+                            labels=('Epoch', 'Loss'), 
+                            title='Loss Curves',
+                            plot_func=plt.plot,
+                            coloring=['brown', 'royalblue'],
+                            names=['Training', 'Validation'],
+                            path=utils.get_dir('static', 'autoencoder'))
+
     checkpoints.update({
         'epochs': epoch + 1,
         'train_time': train_time})
-    
-    cfn = utils.get_path('static', 'autoencoder', filename='train_checkpoints.json')
-    utils.save_json(data=checkpoints, filename=cfn)
-    
-    if visualize:
-        utils.visualize(type='multi-plot',
-                        values=[(range(1, len(train_losses) + 1), train_losses), (range(1, len(val_losses) + 1), val_losses)], 
-                        labels=('Epoch', 'Loss'), 
-                        title='Loss Curves',
-                        plot_func=plt.plot,
-                        coloring=['brown', 'royalblue'],
-                        names=['Training', 'Validation'],
-                        path=utils.get_dir('static', 'autoencoder'))
 
     logger.info(f'\nTraining complete!\nFinal Training Loss: {avg_train_loss:.6f} & Validation Loss: {best_val_loss:.6f}\n')
 
@@ -147,16 +149,18 @@ def main():
                         latent_seq_len=1, 
                         latent_num_feats=8, 
                         hidden_size=128, 
-                        num_layers=1)
+                        num_layers=1,
+                        dropout=0.5)
     
     train(data=dataloaders,
-          epochs=1,
+          epochs=1000,
           patience=30,
           lr=5e-4,
-          criterion=nn.MSELoss(),
+          criterion=nn.SmoothL1Loss(),
           model=model,
           optimizer='AdamW',
           scheduler=('StepLR', 1.0, 0.98),
+          max_grad_norm=1.0,
           visualize=True)
 
 if __name__ == '__main__':
