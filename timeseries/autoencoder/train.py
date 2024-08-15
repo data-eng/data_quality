@@ -38,10 +38,9 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, ma
 
     for epoch in range(epochs):
         start = time.time()
+        total_train_loss = 0.0
 
         model.train()
-
-        total_train_loss = 0.0
 
         #progress_bar = tqdm(enumerate(train_data), total=batches, desc=f"Epoch {epoch + 1}/{epochs}", leave=True)
         
@@ -148,7 +147,7 @@ def main():
                         num_feats=2, 
                         latent_seq_len=1, 
                         latent_num_feats=8, 
-                        hidden_size=32, 
+                        hidden_size=8, 
                         num_layers=1,
                         dropout=0.5)
     
@@ -156,7 +155,7 @@ def main():
           epochs=1000,
           patience=30,
           lr=5e-4,
-          criterion=nn.SmoothL1Loss(),
+          criterion=utils.PNormLoss(p=2),
           model=model,
           optimizer='AdamW',
           scheduler=('StepLR', 1.0, 0.98),

@@ -160,6 +160,16 @@ def combine_data(paths, rate):
 
     df = utils.normalize(df, exclude=['Consensus', 'Time', 'ID'])
 
+    rows_before_consensus_drop = df.shape[0]
+    df = df[df['Consensus'] != -1]
+    logger.info(f"Removed {rows_before_consensus_drop - df.shape[0]} rows with Consensus value -1.")
+    
+    rows_before_nan_drop = df.shape[0]
+    df = df.dropna()
+    logger.info(f"Removed {rows_before_nan_drop - df.shape[0]} rows with NaN values.")
+
+    assert not df.isna().any().any(), "NaN values found in the dataframe!"
+
     return df
 
 def get_dataframes(paths, rate=240, exist=False):

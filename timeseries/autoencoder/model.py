@@ -15,6 +15,7 @@ class Encoder(nn.Module):
 
         x = x[:, -1, :]
         x = self.dropout(x)
+
         x = self.fc(x)
         
         return x

@@ -245,3 +245,15 @@ def get_max(arr):
     max_value = arr[max_index]
 
     return Info(value=max_value, index=max_index)
+
+class PNormLoss(nn.Module):
+    def __init__(self, p=2.0):
+        super(PNormLoss, self).__init__()
+
+        self.p = p
+
+    def forward(self, input, target):
+        diff = torch.abs(input - target)
+        loss = torch.mean(diff ** self.p)
+        
+        return loss
