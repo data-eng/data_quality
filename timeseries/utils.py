@@ -246,9 +246,9 @@ def get_max(arr):
 
     return Info(value=max_value, index=max_index)
 
-class PNormLoss(nn.Module):
+class PowerLoss(nn.Module):
     def __init__(self, p=2.0):
-        super(PNormLoss, self).__init__()
+        super(PowerLoss, self).__init__()
 
         self.p = p
 

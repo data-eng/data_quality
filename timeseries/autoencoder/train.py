@@ -155,7 +155,7 @@ def main():
           epochs=1000,
           patience=30,
           lr=5e-4,
-          criterion=utils.PNormLoss(p=2),
+          criterion=utils.PowerLoss(p=2),
           model=model,
           optimizer='AdamW',
           scheduler=('StepLR', 1.0, 0.98),
