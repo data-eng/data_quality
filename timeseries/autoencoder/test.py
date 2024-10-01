@@ -14,42 +14,55 @@ logger.info(f'Device is {device}')
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-def plot_spectrograms(signals, fs):
-    all_signals = []
+def plot_signals(signals):
+    fig, axes = plt.subplots(len(signals), 1, figsize=(10, 5 * len(signals)))
+    
+    for i, (X, X_dec) in enumerate(signals):
+        X = X.cpu().numpy()
+        X_dec = X_dec.cpu().numpy()
+ 
+        X = X.reshape(-1)
+        X_dec = X_dec.reshape(-1)
 
-    def design_spectrogram(signal, fs, n_fft, title, figsize):
-        signal = signal.cpu().numpy()
+        axes[i].plot(X, label='Raw Signal', alpha=0.5)
+        axes[i].plot(X_dec, label='Decoded Signal', alpha=0.5)
+        axes[i].set_title(f'Signal Plot {i+1}')
+        axes[i].set_xlabel('Samples')
+        axes[i].set_ylabel('Amplitude')
+        axes[i].legend()
 
-        batch_size, seq_len, num_feats = signal.shape
-        signal_concat = signal.reshape(batch_size * seq_len, num_feats)
+    plt.tight_layout()
 
-        fig, axes = plt.subplots(1, num_feats, figsize=figsize)
-        fig.suptitle(f'{title.capitalize()} Signal Spectrogram', fontsize=16)
-        axes = axes.flatten()
+    path = utils.get_path('static', 'autoencoder', filename='signals_plot.png')
+    plt.savefig(path)
+    plt.close(fig)
 
-        for i in range(num_feats):
-            S = librosa.feature.melspectrogram(y=signal_concat[:, i], sr=fs, n_mels=128, n_fft=n_fft)
-            S_dB = librosa.power_to_db(S, ref=np.max)
+def plot_concat_signals(signals):
+    all_raw_signals = []
+    all_decoded_signals = []
 
-            librosa.display.specshow(S_dB, sr=fs, ax=axes[i], x_axis='time', y_axis='mel')
-            axes[i].set(title=f'Channel {i+1}')
-            axes[i].set_yticks([tick for tick in axes[i].get_yticks() if tick != 0.0])
+    for X, X_dec in signals:
+        X = X.cpu().numpy().reshape(-1)
+        X_dec = X_dec.cpu().numpy().reshape(-1)
+        
+        all_raw_signals.append(X)
+        all_decoded_signals.append(X_dec)
 
-        for j in range(num_feats, len(axes)):
-            axes[j].axis('off')
+    all_raw_signals = np.concatenate(all_raw_signals)
+    all_decoded_signals = np.concatenate(all_decoded_signals)
 
-        plt.tight_layout()
+    plt.figure(figsize=(100, 20))
+    plt.plot(all_raw_signals, label='Raw Signal', alpha=0.5)
+    plt.plot(all_decoded_signals, label='Decoded Signal', alpha=0.5)
 
-        path = utils.get_path('static', 'autoencoder', filename=f'{title}_spectro.png')
-        fig.savefig(path)
-        plt.close(fig)
+    plt.title('Raw vs Decoded Signals')
+    plt.xlabel('Samples')
+    plt.ylabel('Amplitude')
+    plt.legend()
 
-    for _, (X, X_enc) in enumerate(signals):
-        all_signals.append((X, 'raw', 122880//3072, (10, 5)))
-        all_signals.append((X_enc, 'encoded', 512//1, (80, 5)))
-
-    for signal, title, n_fft, figsize in all_signals:
-        design_spectrogram(signal, fs, n_fft, title, figsize)
+    path = utils.get_path('static', 'autoencoder', filename='concat_signals_plot.png')
+    plt.savefig(path)
+    plt.close()
 
 def test(data, criterion, model, fs, visualize=False):
     mfn = utils.get_path('models', filename='autoencoder.pth')
@@ -75,10 +88,11 @@ def test(data, criterion, model, fs, visualize=False):
             total_test_loss += test_loss.item()
             progress_bar.set_postfix(Loss=test_loss.item())
 
-            signals.append((X, latent))
+            signals.append((X, X_dec))
 
         if visualize:
-            plot_spectrograms(signals, fs)
+            plot_signals(signals)
+            plot_concat_signals(signals)
 
         avg_test_loss = total_test_loss / batches
 
@@ -90,7 +104,7 @@ def main():
     samples, chunks = 7680, 32
     seq_len = samples // chunks
     
-    datapaths = split_data(dir=npz_dir, train_size=57, val_size=1, test_size=1)
+    datapaths = split_data(dir=npz_dir, train_size=1, val_size=1, test_size=1)
     
     _, _, test_df = get_dataframes(datapaths, rate=seq_len, exist=True)
 
@@ -98,15 +112,16 @@ def main():
 
     dataloaders = create_dataloaders(datasets, batch_size=512, drop_last=True)
 
-    model = Autoencoder(seq_len=240,
+    model = Autoencoder(seq_len=seq_len,
                         num_feats=2, 
                         latent_seq_len=1, 
                         latent_num_feats=8, 
-                        hidden_size=128, 
-                        num_layers=2)
+                        hidden_size=8, 
+                        num_layers=1,
+                        dropout=0.5)
     
     test(data=dataloaders[0],
-         criterion=nn.MSELoss(),
+         criterion=utils.PowerLoss(p=2),
          model=model,
          fs=get_fs(path=datapaths),
          visualize=True)
