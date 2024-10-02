@@ -1,9 +1,8 @@
 import torch
 from tqdm import tqdm
 import warnings
+import numpy as np
 import matplotlib.pyplot as plt
-import librosa
-import librosa.display
 
 from .. import utils
 from ..loader import *
@@ -14,52 +13,84 @@ logger.info(f'Device is {device}')
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-def plot_signals(signals):
-    fig, axes = plt.subplots(len(signals), 1, figsize=(10, 5 * len(signals)))
+def plot_signals(signals, outlier_threshold=1):
+    num_batches = len(signals)
+    num_features = signals[0][0].shape[-1]
+
+    fig, axes = plt.subplots(num_batches, num_features, figsize=(10 * num_features, 5 * num_batches))
     
     for i, (X, X_dec) in enumerate(signals):
-        X = X.cpu().numpy()
-        X_dec = X_dec.cpu().numpy()
- 
-        X = X.reshape(-1)
-        X_dec = X_dec.reshape(-1)
+        for j in range(num_features):
+            ax = axes[i][j] if num_batches > 1 else axes[j]
 
-        axes[i].plot(X, label='Raw Signal', alpha=0.5)
-        axes[i].plot(X_dec, label='Decoded Signal', alpha=0.5)
-        axes[i].set_title(f'Signal Plot {i+1}')
-        axes[i].set_xlabel('Samples')
-        axes[i].set_ylabel('Amplitude')
-        axes[i].legend()
+            X_feat = X[:, j].cpu.numpy().reshape(-1)
+            X_dec_feat = X_dec[:, j].cpu.numpy().reshape(-1)
 
+            outliers_X = np.where(np.abs(X_feat) > outlier_threshold)[0]
+            outliers_X_dec = np.where(np.abs(X_dec_feat) > outlier_threshold)[0]
+
+            X_feat[outliers_X] = 0
+            X_dec_feat[outliers_X_dec] = 0
+
+            ax.plot(X_feat, label=f'Raw Signal', color='C1', alpha=0.5)
+            ax.plot(X_dec_feat, label=f'Decoded Signal', color='C0', alpha=0.5)
+
+            ax.set_ylim(-outlier_threshold, outlier_threshold)
+
+            ax.scatter(outliers_X, np.zeros_like(outliers_X), color='C1', label='Raw Outliers', s=30)
+            ax.scatter(outliers_X_dec, np.zeros_like(outliers_X_dec), color='C0', label='Decoded Outliers', s=30)
+
+            ax.set_title(f'Batch {i+1} - Feature {j+1}')
+            ax.set_xlabel('Samples')
+            ax.set_ylabel('Amplitude')
+            ax.legend()
+        
     plt.tight_layout()
 
     path = utils.get_path('static', 'autoencoder', filename='signals_plot.png')
     plt.savefig(path)
     plt.close(fig)
 
-def plot_concat_signals(signals):
-    all_raw_signals = []
-    all_decoded_signals = []
+def plot_concat_signals(signals, outlier_threshold=1):
+    num_features = signals[0][0].shape[-1]
+
+    all_raw_signals = [[] for _ in range(num_features)]
+    all_decoded_signals = [[] for _ in range(num_features)]
 
     for X, X_dec in signals:
-        X = X.cpu().numpy().reshape(-1)
-        X_dec = X_dec.cpu().numpy().reshape(-1)
-        
-        all_raw_signals.append(X)
-        all_decoded_signals.append(X_dec)
+        for j in range(num_features):
+            all_raw_signals[j].append(X[:, j].cpu.numpy().reshape(-1))
+            all_decoded_signals[j].append(X_dec[:, j].cpu.numpy().reshape(-1))
 
-    all_raw_signals = np.concatenate(all_raw_signals)
-    all_decoded_signals = np.concatenate(all_decoded_signals)
+    _, axes = plt.subplots(1, num_features, figsize=(10 * num_features, 5))
+    
+    for j in range(num_features):
+        raw_signals_concat = np.concatenate(all_raw_signals[j])
+        decoded_signals_concat = np.concatenate(all_decoded_signals[j])
 
-    plt.figure(figsize=(100, 20))
-    plt.plot(all_raw_signals, label='Raw Signal', alpha=0.5)
-    plt.plot(all_decoded_signals, label='Decoded Signal', alpha=0.5)
+        outliers_raw = np.where(np.abs(raw_signals_concat) > outlier_threshold)[0]
+        outliers_decoded = np.where(np.abs(decoded_signals_concat) > outlier_threshold)[0]
 
-    plt.title('Raw vs Decoded Signals')
-    plt.xlabel('Samples')
-    plt.ylabel('Amplitude')
-    plt.legend()
+        raw_signals_concat[outliers_raw] = 0
+        decoded_signals_concat[outliers_decoded] = 0
 
+        ax = axes[j]
+
+        ax.plot(raw_signals_concat, label=f'Raw Signal', color='C1', alpha=0.5)
+        ax.plot(decoded_signals_concat, label=f'Decoded Signal', color='C0', alpha=0.5)
+
+        ax.set_ylim(-outlier_threshold, outlier_threshold)
+
+        ax.scatter(outliers_raw, np.zeros_like(outliers_raw), color='C1', label='Raw Outliers', s=30)
+        ax.scatter(outliers_decoded, np.zeros_like(outliers_decoded), color='C0', label='Decoded Outliers', s=30)
+
+        ax.set_title(f'Signal - Feature {j+1}')
+        ax.set_xlabel('Samples')
+        ax.set_ylabel('Amplitude')
+        ax.legend()
+    
+    plt.tight_layout()
+    
     path = utils.get_path('static', 'autoencoder', filename='concat_signals_plot.png')
     plt.savefig(path)
     plt.close()
@@ -116,12 +147,12 @@ def main():
                         num_feats=2, 
                         latent_seq_len=1, 
                         latent_num_feats=8, 
-                        hidden_size=8, 
+                        hidden_size=32, 
                         num_layers=1,
-                        dropout=0.5)
+                        dropout=0)
     
     test(data=dataloaders[0],
-         criterion=utils.PowerLoss(p=2),
+         criterion=utils.LogPowerLoss(p=1),
          model=model,
          fs=get_fs(path=datapaths),
          visualize=True)
