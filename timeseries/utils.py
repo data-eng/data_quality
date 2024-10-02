@@ -246,14 +246,14 @@ def get_max(arr):
 
     return Info(value=max_value, index=max_index)
 
-class PowerLoss(nn.Module):
-    def __init__(self, p=2.0):
-        super(PowerLoss, self).__init__()
-
+class LogPowerLoss(nn.Module):
+    def __init__(self, p=1.0, epsilon=1e-6):
+        super(LogPowerLoss, self).__init__()
         self.p = p
+        self.epsilon = epsilon
 
     def forward(self, input, target):
-        diff = torch.abs(input - target)
-        loss = torch.mean(diff ** self.p)
+        diff = torch.abs(input - target) + self.epsilon
+        loss = torch.median(torch.log(diff ** self.p))
         
         return loss
