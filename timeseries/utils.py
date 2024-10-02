@@ -254,6 +254,8 @@ class LogPowerLoss(nn.Module):
 
     def forward(self, input, target):
         diff = torch.abs(input - target) + self.epsilon
-        loss = torch.median(torch.log(diff ** self.p))
+        log_diff = torch.log1p(diff ** self.p)
         
+        loss = torch.median(log_diff)
+
         return loss
