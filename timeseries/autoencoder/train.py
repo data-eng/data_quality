@@ -12,7 +12,7 @@ logger.info(f'Device is {device}')
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, max_grad_norm=1.0, visualize=False):
+def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, visualize=False):
     model.to(device)
 
     train_data, val_data = data
@@ -54,8 +54,6 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, ma
             train_loss = criterion(X_dec, X)
             optimizer.zero_grad()
             train_loss.backward()
-
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
             optimizer.step()
 
             total_train_loss += train_loss.item()
@@ -135,31 +133,30 @@ def main():
     samples, chunks = 7680, 32
     seq_len = samples // chunks
 
-    datapaths = split_data(dir=npz_dir, train_size=57, val_size=1, test_size=1)
+    datapaths = split_data(dir=npz_dir, train_size=46, val_size=3, test_size=10)
     
-    train_df, val_df, _ = get_dataframes(datapaths, rate=seq_len, exist=True)
+    train_df, val_df, _ = get_dataframes(datapaths, rate=seq_len, exist=False)
 
     datasets = create_datasets(dataframes=(train_df, val_df), seq_len=seq_len)
 
     dataloaders = create_dataloaders(datasets, batch_size=512, drop_last=False)
 
-    model = Autoencoder(seq_len=240,
+    model = Autoencoder(seq_len=seq_len,
                         num_feats=2, 
                         latent_seq_len=1, 
                         latent_num_feats=8, 
-                        hidden_size=8, 
+                        hidden_size=16, 
                         num_layers=1,
-                        dropout=0.5)
+                        dropout=0)
     
     train(data=dataloaders,
           epochs=1000,
-          patience=30,
+          patience=10,
           lr=5e-4,
-          criterion=utils.PowerLoss(p=2),
+          criterion=utils.LogPowerLoss(p=1),
           model=model,
           optimizer='AdamW',
           scheduler=('StepLR', 1.0, 0.98),
-          max_grad_norm=1.0,
           visualize=True)
 
 if __name__ == '__main__':
