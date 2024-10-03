@@ -168,7 +168,7 @@ def combine_data(paths, rate):
 
     assert not df.isna().any().any(), "NaN values found in the dataframe!"
 
-    df = utils.normalize(df, exclude=['Consensus', 'Time', 'ID'])
+    df = utils.robust_normalize(df, exclude=['Consensus', 'Time', 'ID'])
 
     return df
 

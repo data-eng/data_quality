@@ -135,7 +135,7 @@ def main():
 
     datapaths = split_data(dir=npz_dir, train_size=46, val_size=3, test_size=10)
     
-    train_df, val_df, _ = get_dataframes(datapaths, rate=seq_len, exist=False)
+    train_df, val_df, _ = get_dataframes(datapaths, rate=seq_len, exist=True)
 
     datasets = create_datasets(dataframes=(train_df, val_df), seq_len=seq_len)
 
@@ -145,18 +145,18 @@ def main():
                         num_feats=2, 
                         latent_seq_len=1, 
                         latent_num_feats=8, 
-                        hidden_size=16, 
+                        hidden_size=8, 
                         num_layers=1,
-                        dropout=0)
+                        dropout=0.3)
     
     train(data=dataloaders,
           epochs=1000,
           patience=10,
-          lr=5e-4,
-          criterion=utils.LogPowerLoss(p=1),
+          lr=5e-5,
+          criterion=utils.PowerLoss(p=1),
           model=model,
           optimizer='AdamW',
-          scheduler=('StepLR', 1.0, 0.98),
+          scheduler=('StepLR', 1.0, 0.95),
           visualize=True)
 
 if __name__ == '__main__':

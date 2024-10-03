@@ -206,26 +206,58 @@ def normalize(df, exclude):
     for col in df.columns:
         if col not in exclude:
             series = df[col]
-            mean, std = stats[col]
+
+            mean = stats[col]['mean']
+            std = stats[col]['std']
+
             series = (series - mean) / std
             newdf[col] = series
 
     return newdf
 
-def get_stats(df):
+def robust_normalize(df, exclude):
     """
-    Compute mean and standard deviation for each column in the dataframe.
+    Normalize data using robust scaling (median and IQR) from precomputed stats.
 
     :param df: dataframe
-    :return: dictionary
+    :param exclude: columns to exclude from normalization
+    :return: processed dataframe
+    """
+    newdf = df.copy()
+    stats = get_stats(df)
+    
+    for col in df.columns:
+        if col not in exclude:
+            median = stats[col]['median']
+            iqr = stats[col]['iqr']
+            
+            newdf[col] = (df[col] - median) / (iqr if iqr > 0 else 1)
+
+    return newdf
+
+def get_stats(df):
+    """
+    Compute mean, standard deviation, median, and IQR for each column in the dataframe.
+
+    :param df: dataframe
+    :return: dictionary with statistics
     """
     stats = {}
 
     for col in df.columns:
         series = df[col]
+
         mean = series.mean()
         std = series.std()
-        stats[col] = (mean, std)
+        median = series.median()
+        iqr = series.quantile(0.75) - series.quantile(0.25)
+
+        stats[col] = {
+            'mean': mean,
+            'std': std,
+            'median': median,
+            'iqr': iqr
+        }
 
     path = get_path('data', filename='stats.json')
     save_json(data=stats, filename=path)
@@ -245,16 +277,15 @@ def get_max(arr):
     max_value = arr[max_index]
 
     return Info(value=max_value, index=max_index)
-
-class LogPowerLoss(nn.Module):
-    def __init__(self, p=1.0, offset=10, epsilon=1e-6):
-        super(LogPowerLoss, self).__init__()
+    
+class PowerLoss(nn.Module):
+    def __init__(self, p=1.0, epsilon=1e-6):
+        super(PowerLoss, self).__init__()
         self.p = p
-        self.offset = offset
         self.epsilon = epsilon
 
     def forward(self, input, target):
         diff = torch.abs(input - target) + self.epsilon
-        loss = torch.median(torch.log(diff ** self.p)) + self.offset
+        loss = torch.median(diff ** self.p)
         
         return loss

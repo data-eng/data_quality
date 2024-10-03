@@ -13,18 +13,18 @@ logger.info(f'Device is {device}')
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-def plot_signals(signals, outlier_threshold=1):
+def plot_signals(signals, outlier_threshold=1, dpi=1200):
     num_batches = len(signals)
     num_features = signals[0][0].shape[-1]
-
-    fig, axes = plt.subplots(num_batches, num_features, figsize=(10 * num_features, 5 * num_batches))
     
     for i, (X, X_dec) in enumerate(signals):
-        for j in range(num_features):
-            ax = axes[i][j] if num_batches > 1 else axes[j]
+        fig, axes = plt.subplots(1, num_features, figsize=(10 * num_features, 5))
 
-            X_feat = X[:, j].cpu.numpy().reshape(-1)
-            X_dec_feat = X_dec[:, j].cpu.numpy().reshape(-1)
+        for j in range(num_features):
+            ax = axes[j] if num_features > 1 else axes
+
+            X_feat = X[:, j].cpu().numpy().reshape(-1)
+            X_dec_feat = X_dec[:, j].cpu().numpy().reshape(-1)
 
             outliers_X = np.where(np.abs(X_feat) > outlier_threshold)[0]
             outliers_X_dec = np.where(np.abs(X_dec_feat) > outlier_threshold)[0]
@@ -32,11 +32,10 @@ def plot_signals(signals, outlier_threshold=1):
             X_feat[outliers_X] = 0
             X_dec_feat[outliers_X_dec] = 0
 
-            ax.plot(X_feat, label=f'Raw Signal', color='C1', alpha=0.5)
-            ax.plot(X_dec_feat, label=f'Decoded Signal', color='C0', alpha=0.5)
+            ax.plot(X_feat, label='Raw Signal', color='C1', alpha=0.5, linewidth=0.2)
+            ax.plot(X_dec_feat, label='Decoded Signal', color='C0', alpha=0.5, linewidth=0.2)
 
             ax.set_ylim(-outlier_threshold, outlier_threshold)
-
             ax.scatter(outliers_X, np.zeros_like(outliers_X), color='C1', label='Raw Outliers', s=30)
             ax.scatter(outliers_X_dec, np.zeros_like(outliers_X_dec), color='C0', label='Decoded Outliers', s=30)
 
@@ -45,11 +44,11 @@ def plot_signals(signals, outlier_threshold=1):
             ax.set_ylabel('Amplitude')
             ax.legend()
         
-    plt.tight_layout()
+        plt.tight_layout()
 
-    path = utils.get_path('static', 'autoencoder', filename='signals_plot.png')
-    plt.savefig(path)
-    plt.close(fig)
+        path = utils.get_path('static', 'autoencoder', 'signals', filename=f'batch_{i+1}.png')
+        plt.savefig(path, dpi=dpi)
+        plt.close(fig)
 
 def plot_concat_signals(signals, outlier_threshold=1):
     num_features = signals[0][0].shape[-1]
@@ -59,8 +58,8 @@ def plot_concat_signals(signals, outlier_threshold=1):
 
     for X, X_dec in signals:
         for j in range(num_features):
-            all_raw_signals[j].append(X[:, j].cpu.numpy().reshape(-1))
-            all_decoded_signals[j].append(X_dec[:, j].cpu.numpy().reshape(-1))
+            all_raw_signals[j].append(X[:, j].cpu().numpy().reshape(-1))
+            all_decoded_signals[j].append(X_dec[:, j].cpu().numpy().reshape(-1))
 
     _, axes = plt.subplots(1, num_features, figsize=(10 * num_features, 5))
     
@@ -122,8 +121,8 @@ def test(data, criterion, model, fs, visualize=False):
             signals.append((X, X_dec))
 
         if visualize:
-            plot_signals(signals)
-            plot_concat_signals(signals)
+            plot_signals(signals, outlier_threshold=0.05)
+            #plot_concat_signals(signals)
 
         avg_test_loss = total_test_loss / batches
 
@@ -135,7 +134,7 @@ def main():
     samples, chunks = 7680, 32
     seq_len = samples // chunks
     
-    datapaths = split_data(dir=npz_dir, train_size=1, val_size=1, test_size=1)
+    datapaths = split_data(dir=npz_dir, train_size=46, val_size=3, test_size=10)
     
     _, _, test_df = get_dataframes(datapaths, rate=seq_len, exist=True)
 
@@ -147,7 +146,7 @@ def main():
                         num_feats=2, 
                         latent_seq_len=1, 
                         latent_num_feats=8, 
-                        hidden_size=32, 
+                        hidden_size=64, 
                         num_layers=1,
                         dropout=0)
     
