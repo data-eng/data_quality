@@ -144,7 +144,7 @@ def main():
 
     get_boas_data(base_path=bitbrain_dir, output_path=raw_dir)
 
-    datapaths = split_data(dir=raw_dir, train_size=46, val_size=3, test_size=10)
+    datapaths = split_data(dir=raw_dir, train_size=88, val_size=10, test_size=30)
     
     train_df, val_df, _ = get_dataframes(datapaths, samples=samples, seq_len=seq_len, exist=False)
 
@@ -164,7 +164,7 @@ def main():
           epochs=1000,
           patience=30,
           lr=1e-4,
-          criterion=utils.BlendedLoss(p=1.0, blend=0.05),
+          criterion=utils.BlendedLoss(p=1.0, blend=0.1),
           model=model,
           optimizer='AdamW',
           scheduler={"name": 'ReduceLROnPlateau',"params": {'factor': 0.99, 'patience': 3}},

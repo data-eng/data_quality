@@ -23,6 +23,8 @@ def get_boas_data(base_path, output_path):
         subject_id = os.path.basename(subject_folder)
         eeg_folder = os.path.join(subject_folder, 'eeg')
 
+        output_file = os.path.join(output_path, f'{subject_id}.csv')
+
         if os.path.exists(output_file):
             continue
 
@@ -48,7 +50,6 @@ def get_boas_data(base_path, output_path):
 
         combined_data = pd.concat([x_data, y_data], axis=1)
 
-        output_file = os.path.join(output_path, f'{subject_id}.csv')
         combined_data.to_csv(output_file, index=False)
         print(f"Saved combined data for {subject_id} to {output_file}")
 
@@ -197,7 +198,7 @@ def combine_data(paths, samples=7680, seq_len=240):
 
         df = pd.DataFrame(X, columns=['HB_1', 'HB_2'])
         df['Majority'] = y
-        df['Time'] = np.arange(1, samples + 1)
+        df['Time'] = (np.arange(len(df)) % samples) + 1
         df['ID'] = (df['Time'] - 1) // seq_len + 1
 
         dataframes.append(df)
@@ -219,7 +220,7 @@ def combine_data(paths, samples=7680, seq_len=240):
 
     return df
 
-def get_dataframes(paths, rate=240, exist=False):
+def get_dataframes(paths, rate=240, samples=7680, seq_len=240, exist=False):
     """
     Create or load dataframes for training, validation, and testing.
 
@@ -239,7 +240,7 @@ def get_dataframes(paths, rate=240, exist=False):
             df = pd.read_csv(proc_path)
             logger.info(f"Loaded existing dataframe from {proc_path}.")
         else:
-            df = combine_data(paths, rate)
+            df = combine_data(paths, samples, seq_len)
             df.to_csv(proc_path, index=False)
             logger.info(f"Saved new dataframe to {proc_path}.")
 
@@ -283,7 +284,7 @@ def create_datasets(dataframes, seq_len=7680):
     """
 
     datasets = []
-    X, t, y = ["HB_1", "HB_2"], ["Time", "ID"], ["majority"]
+    X, t, y = ["HB_1", "HB_2"], ["Time", "ID"], ["Majority"]
 
     logger.info("Creating datasets from dataframes.") 
 
