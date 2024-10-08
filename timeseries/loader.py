@@ -159,14 +159,6 @@ def load_file(path):
     return X, y
 
 def get_fs(path):
-    files = [file for sublist in path for file in sublist]
-
-    random_file = random.choice(files)
-    _, _, fs, _ = load_file(random_file)
-
-    return fs[0, 0]
-
-def get_fs(path):
     """
     Get the sampling frequency (fs) from a randomly selected csv file in the specified directory.
 
