@@ -12,7 +12,7 @@ logger.info(f'Device is {device}')
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, visualize=False):
+def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, ignore_outliers=False, visualize=False):
     model.to(device)
 
     train_data, val_data = data
@@ -21,7 +21,7 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
     logger.info(f"Number of training iterations per epoch: {batches}")
 
     optimizer = utils.get_optim(optimizer, model, lr)
-    scheduler = utils.get_sched(*scheduler, optimizer)
+    scheduler = utils.get_sched(optimizer, scheduler['name'], **scheduler['params'])
 
     train_time = 0.0
     best_val_loss = float('inf')
@@ -49,6 +49,10 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
             X = X.to(device)
 
             X, _ = separate(src=X, c=[0,1], t=[3])
+
+            if ignore_outliers:
+                    X[(X > 10) | (X < -10)] = 0
+
             X_dec, _ = model(X)
 
             train_loss = criterion(X_dec, X)
@@ -70,6 +74,10 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
                 X = X.to(device)
 
                 X, _ = separate(src=X, c=[0,1], t=[3])
+                
+                if ignore_outliers:
+                    X[(X > 10) | (X < -10)] = 0
+
                 X_dec, _ = model(X)
 
                 val_loss = criterion(X_dec, X)
@@ -106,7 +114,7 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
             logger.info(f'Early stopping after {epoch + 1} epochs without improvement. Patience is {patience}.')
             break
 
-        scheduler.step()
+        scheduler.step(avg_val_loss)
 
     checkpoints.update({
         'epochs': epoch + 1,
@@ -128,14 +136,17 @@ def train(data, epochs, patience, lr, criterion, model, optimizer, scheduler, vi
     logger.info(f'\nTraining complete!\nFinal Training Loss: {avg_train_loss:.6f} & Validation Loss: {best_val_loss:.6f}\n')
 
 def main():
-    npz_dir = utils.get_dir('data', 'npz')
-
     samples, chunks = 7680, 32
     seq_len = samples // chunks
 
-    datapaths = split_data(dir=npz_dir, train_size=46, val_size=3, test_size=10)
+    bitbrain_dir = utils.get_dir('data', 'bitbrain')
+    raw_dir = utils.get_dir('data', 'raw')
+
+    get_boas_data(base_path=bitbrain_dir, output_path=raw_dir)
+
+    datapaths = split_data(dir=raw_dir, train_size=46, val_size=3, test_size=10)
     
-    train_df, val_df, _ = get_dataframes(datapaths, rate=seq_len, exist=True)
+    train_df, val_df, _ = get_dataframes(datapaths, samples=samples, seq_len=seq_len, exist=False)
 
     datasets = create_datasets(dataframes=(train_df, val_df), seq_len=seq_len)
 
@@ -145,18 +156,19 @@ def main():
                         num_feats=2, 
                         latent_seq_len=1, 
                         latent_num_feats=8, 
-                        hidden_size=8, 
+                        hidden_size=32, 
                         num_layers=1,
-                        dropout=0.3)
+                        dropout=0.1)
     
     train(data=dataloaders,
           epochs=1000,
-          patience=10,
-          lr=5e-5,
-          criterion=utils.PowerLoss(p=1),
+          patience=30,
+          lr=1e-4,
+          criterion=utils.BlendedLoss(p=1.0, blend=0.05),
           model=model,
           optimizer='AdamW',
-          scheduler=('StepLR', 1.0, 0.95),
+          scheduler={"name": 'ReduceLROnPlateau',"params": {'factor': 0.99, 'patience': 3}},
+          ignore_outliers=False,
           visualize=True)
 
 if __name__ == '__main__':

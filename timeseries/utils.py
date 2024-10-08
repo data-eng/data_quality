@@ -79,18 +79,17 @@ def get_optim(name, model, lr):
 
     return optimizer
 
-def get_sched(name, step_size, gamma, optimizer):
+def get_sched(optimizer, name, **params):
     """
-    Get scheduler object based on name, step size, gamma, and optimizer.
+    Get scheduler object based on optimizer and additional parameters.
 
-    :param name: str
-    :param step_size: int
-    :param gamma: gamma float
     :param optimizer: optimizer object
+    :param name: str, name of the scheduler
+    :param params: additional parameters for the scheduler
     :return: scheduler object
     """
     sched_class = getattr(sched, name)
-    scheduler = sched_class(optimizer, step_size, gamma)
+    scheduler = sched_class(optimizer, **params)
 
     return scheduler
 
@@ -278,14 +277,20 @@ def get_max(arr):
 
     return Info(value=max_value, index=max_index)
     
-class PowerLoss(nn.Module):
-    def __init__(self, p=1.0, epsilon=1e-6):
-        super(PowerLoss, self).__init__()
+class BlendedLoss(nn.Module):
+    def __init__(self, p=1.0, epsilon=1e-6, blend=0.01):
+        super(BlendedLoss, self).__init__()
         self.p = p
         self.epsilon = epsilon
+        self.blend = blend
 
     def forward(self, input, target):
         diff = torch.abs(input - target) + self.epsilon
-        loss = torch.median(diff ** self.p)
+
+        powered_diff = diff ** self.p
+        median_diff = (1 - self.blend) * torch.median(powered_diff)
+        mean_diff = self.blend * torch.mean(powered_diff)
+        
+        loss = median_diff + mean_diff
         
         return loss

@@ -5,10 +5,52 @@ import pandas as pd
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 import os
+import glob
+import mne
 
 from . import utils
 
 logger = utils.get_logger(level='DEBUG')
+
+def get_boas_data(base_path, output_path):
+    """
+    Retrieve and combine EEG and event data for subjects from the specified Bitbrain dataset folder.
+
+    :param base_path: path to the base directory containing subject folders
+    :param output_path: path to the directory where combined data will be saved
+    """
+    for subject_folder in glob.glob(os.path.join(base_path, 'sub-*')):
+        subject_id = os.path.basename(subject_folder)
+        eeg_folder = os.path.join(subject_folder, 'eeg')
+
+        if os.path.exists(output_file):
+            continue
+
+        if not os.path.exists(eeg_folder):
+            print(f"No EEG folder found for {subject_id}. Skipping.")
+            continue
+
+        eeg_file_pattern = os.path.join(eeg_folder, f'{subject_id}_task-Sleep_acq-headband_eeg.edf')
+        events_file_pattern = os.path.join(eeg_folder, f'{subject_id}_task-Sleep_acq-psg_events.tsv')
+
+        try:
+            raw = mne.io.read_raw_edf(eeg_file_pattern, preload=True)
+            x_data = raw.to_data_frame()
+        except Exception as e:
+            print(f"Error loading EEG data for {subject_id}: {e}")
+            continue
+
+        try:
+            y_data = pd.read_csv(events_file_pattern, delimiter='\t')
+        except Exception as e:
+            print(f"Error loading events data for {subject_id}: {e}")
+            continue
+
+        combined_data = pd.concat([x_data, y_data], axis=1)
+
+        output_file = os.path.join(output_path, f'{subject_id}.csv')
+        combined_data.to_csv(output_file, index=False)
+        print(f"Saved combined data for {subject_id} to {output_file}")
 
 class TSDataset(Dataset):
     def __init__(self, df, seq_len, X, t, y, per_epoch=True):
@@ -83,13 +125,13 @@ class TSDataset(Dataset):
 
 def split_data(dir, train_size=57, val_size=1, test_size=1):
     """
-    Split the npz files into training, validation, and test sets.
+    Split the csv files into training, validation, and test sets.
 
-    :param dir: directory containing the npz files
+    :param dir: directory containing the csv files
     :param train_size: number of files for training
     :param val_size: number of files for validation
     :param test_size: number of files for testing
-    :return: tuple of lists containing npz file paths for train, val, and test sets
+    :return: tuple of lists containing csv file paths for train, val, and test sets
     """
     paths = [utils.get_path(dir, filename=file) for file in os.listdir(dir)]
     logger.info(f"Found {len(paths)} files in directory: {dir} ready for splitting.")
@@ -104,20 +146,17 @@ def split_data(dir, train_size=57, val_size=1, test_size=1):
 
 def load_file(path):
     """
-    Load data from a .npz file.
+    Load data from a .csv file.
 
-    :param path: path to the .npz file
-    :return: tuple
+    :param path: path to the .csv file
+    :return: tuple (X, y)
     """
-    with np.load(path, allow_pickle=True) as data:
-        X = data['x']
-        y = data['y']
-        fs = data['fs']
-        label = data['label']
+    df = pd.read_csv(path)
 
-    assert X.shape[1] == fs * 30, f"Expected {fs * 30} samples per epoch, but got {X.shape[1]}"
+    X = df[['HB_1', 'HB_2']].values
+    y = df['majority'].values
 
-    return X, y, fs, label
+    return X, y
 
 def get_fs(path):
     files = [file for sublist in path for file in sublist]
@@ -127,11 +166,34 @@ def get_fs(path):
 
     return fs[0, 0]
 
-def combine_data(paths, rate):
+def get_fs(path):
+    """
+    Get the sampling frequency (fs) from a randomly selected csv file in the specified directory.
+
+    :param path: path to the directory containing csv files
+    :return: sampling frequency (fs) in Hz
+    """
+    csv_files = [f for f in os.listdir(path) if f.endswith('.csv')]
+    selected_file = os.path.join(path, random.choice(csv_files))
+
+    data = pd.read_csv(selected_file)
+    time = data['time']
+
+    time_diffs = time.diff().dropna()
+    avg_time_diff = time_diffs.mean()
+
+    fs = 1 / avg_time_diff
+    print(f"Sampling frequency: {fs:.2f} Hz")
+
+    return fs
+
+def combine_data(paths, samples=7680, seq_len=240):
     """
     Combine data from multiple npz files into a dataframe.
 
     :param paths: list of file paths to npz files
+    :param samples: int
+    :param seq_len: int
     :return: dataframe
     """
     dataframes = []
@@ -139,28 +201,21 @@ def combine_data(paths, rate):
     logger.info(f"Combining data from {len(paths)} files.")
 
     for path in paths:
-        X, y, _, labels = load_file(path)
+        X, y = load_file(path)
 
-        num_epochs = X.shape[0]
-        samples_per_epoch = X.shape[1]
-        label_names = [item[0] for sublist in labels for item in sublist]
+        df = pd.DataFrame(X, columns=['HB_1', 'HB_2'])
+        df['Majority'] = y
+        df['Time'] = np.arange(1, samples + 1)
+        df['ID'] = (df['Time'] - 1) // seq_len + 1
 
-        for epoch in range(num_epochs):
-            df = pd.DataFrame(X[epoch], columns=label_names)
-
-            df['Consensus'] = y[epoch, 3]
-            df['Time'] = np.arange(1, samples_per_epoch + 1)
-
-            df['ID'] = (df['Time'] - 1) // rate + 1
-
-            dataframes.append(df)
+        dataframes.append(df)
 
     df = pd.concat(dataframes, ignore_index=True)
     logger.info(f"Combined dataframe shape: {df.shape}")
 
-    rows_before_consensus_drop = df.shape[0]
-    df = df[df['Consensus'] != -1]
-    logger.info(f"Removed {rows_before_consensus_drop - df.shape[0]} rows with Consensus value -1.")
+    rows_before_majority_drop = df.shape[0]
+    df = df[df['Majority'] != -1]
+    logger.info(f"Removed {rows_before_majority_drop - df.shape[0]} rows with majority value -1.")
     
     rows_before_nan_drop = df.shape[0]
     df = df.dropna()
@@ -168,7 +223,7 @@ def combine_data(paths, rate):
 
     assert not df.isna().any().any(), "NaN values found in the dataframe!"
 
-    df = utils.robust_normalize(df, exclude=['Consensus', 'Time', 'ID'])
+    df = utils.robust_normalize(df, exclude=['Majority', 'Time', 'ID'])
 
     return df
 
@@ -186,15 +241,15 @@ def get_dataframes(paths, rate=240, exist=False):
     logger.info("Creating dataframes for training, validation, and testing.")
 
     for paths, name in zip(paths, names):
-        csv_path = utils.get_path('data', 'csv', filename=f"{name}.csv")
+        proc_path = utils.get_path('data', 'proc', filename=f"{name}.csv")
 
         if exist:
-            df = pd.read_csv(csv_path)
-            logger.info(f"Loaded existing dataframe from {csv_path}.")
+            df = pd.read_csv(proc_path)
+            logger.info(f"Loaded existing dataframe from {proc_path}.")
         else:
             df = combine_data(paths, rate)
-            df.to_csv(csv_path, index=False)
-            logger.info(f"Saved new dataframe to {csv_path}.")
+            df.to_csv(proc_path, index=False)
+            logger.info(f"Saved new dataframe to {proc_path}.")
 
         dataframes.append(df)
 
@@ -236,7 +291,7 @@ def create_datasets(dataframes, seq_len=7680):
     """
 
     datasets = []
-    X, t, y = ["HB_1", "HB_2"], ["Time", "ID"], ["Consensus"]
+    X, t, y = ["HB_1", "HB_2"], ["Time", "ID"], ["majority"]
 
     logger.info("Creating datasets from dataframes.") 
 

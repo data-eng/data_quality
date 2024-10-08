@@ -32,8 +32,8 @@ def plot_signals(signals, outlier_threshold=1, dpi=1200):
             X_feat[outliers_X] = 0
             X_dec_feat[outliers_X_dec] = 0
 
-            ax.plot(X_feat, label='Raw Signal', color='C1', alpha=0.5, linewidth=0.2)
-            ax.plot(X_dec_feat, label='Decoded Signal', color='C0', alpha=0.5, linewidth=0.2)
+            ax.plot(X_feat, label='Raw Signal', color='C1', alpha=0.5, linewidth=0.3)
+            ax.plot(X_dec_feat, label='Decoded Signal', color='C0', alpha=0.5, linewidth=0.3)
 
             ax.set_ylim(-outlier_threshold, outlier_threshold)
             ax.scatter(outliers_X, np.zeros_like(outliers_X), color='C1', label='Raw Outliers', s=30)
@@ -121,7 +121,7 @@ def test(data, criterion, model, fs, visualize=False):
             signals.append((X, X_dec))
 
         if visualize:
-            plot_signals(signals, outlier_threshold=0.05)
+            plot_signals(signals, outlier_threshold=10)
             #plot_concat_signals(signals)
 
         avg_test_loss = total_test_loss / batches
@@ -129,14 +129,17 @@ def test(data, criterion, model, fs, visualize=False):
     logger.info(f'\nTesting complete!\nTesting Loss: {avg_test_loss:.6f}\n')
 
 def main():
-    npz_dir = utils.get_dir('data', 'npz')
-    
     samples, chunks = 7680, 32
     seq_len = samples // chunks
+
+    bitbrain_dir = utils.get_dir('data', 'bitbrain')
+    raw_dir = utils.get_dir('data', 'raw')
+
+    get_boas_data(base_path=bitbrain_dir, output_path=raw_dir)
     
-    datapaths = split_data(dir=npz_dir, train_size=46, val_size=3, test_size=10)
+    datapaths = split_data(dir=raw_dir, train_size=46, val_size=3, test_size=10)
     
-    _, _, test_df = get_dataframes(datapaths, rate=seq_len, exist=True)
+    _, _, test_df = get_dataframes(datapaths, samples=samples, seq_len=seq_len, exist=False)
 
     datasets = create_datasets(dataframes=(test_df,), seq_len=seq_len)
 
@@ -146,14 +149,14 @@ def main():
                         num_feats=2, 
                         latent_seq_len=1, 
                         latent_num_feats=8, 
-                        hidden_size=64, 
+                        hidden_size=32, 
                         num_layers=1,
-                        dropout=0)
+                        dropout=0.1)
     
     test(data=dataloaders[0],
-         criterion=utils.LogPowerLoss(p=1),
+         criterion=utils.BlendedLoss(p=1.0, blend=0.05),
          model=model,
-         fs=get_fs(path=datapaths),
+         fs=get_fs(path=raw_dir),
          visualize=True)
 
 if __name__ == '__main__':
