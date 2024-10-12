@@ -144,9 +144,9 @@ def main():
 
     get_boas_data(base_path=bitbrain_dir, output_path=raw_dir)
 
-    datapaths = split_data(dir=raw_dir, train_size=88, val_size=10, test_size=30)
+    datapaths = split_data(dir=raw_dir, train_size=43, val_size=3, test_size=10)
     
-    train_df, val_df, _ = get_dataframes(datapaths, samples=samples, seq_len=seq_len, exist=False)
+    train_df, val_df, _ = get_dataframes(datapaths, samples=samples, seq_len=seq_len, exist=True)
 
     datasets = create_datasets(dataframes=(train_df, val_df), seq_len=seq_len)
 
@@ -155,10 +155,10 @@ def main():
     model = Autoencoder(seq_len=seq_len,
                         num_feats=2, 
                         latent_seq_len=1, 
-                        latent_num_feats=8, 
+                        latent_num_feats=16, 
                         hidden_size=32, 
                         num_layers=1,
-                        dropout=0.1)
+                        dropout=0.05)
     
     train(data=dataloaders,
           epochs=1000,
@@ -166,7 +166,7 @@ def main():
           lr=1e-4,
           criterion=utils.BlendedLoss(p=1.0, blend=0.1),
           model=model,
-          optimizer='AdamW',
+          optimizer='Adam',
           scheduler={"name": 'ReduceLROnPlateau',"params": {'factor': 0.99, 'patience': 3}},
           ignore_outliers=False,
           visualize=True)
