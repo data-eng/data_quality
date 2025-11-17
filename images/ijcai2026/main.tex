@@ -95,12 +95,27 @@ anonymous@affiliation
 \maketitle
 
 \begin{abstract}
-Abstract, 200 words max
+
+
 \end{abstract}
 
 \section{Introduction}
 
-Positioning. Background.
+% Positioning. Background.
+Sustainable AI has emerged in an era where AI workload enormously increase the data center emissions~\{jha2025forecasting}. 
+Computationally expensive and time-consuming neural networks are being trained daily with massive datasets, while the demand for even larger, better or more task-oriented datasets shows no sign of slowing down.
+Questiong like: "How much more data do I need~\{mahmood2022much}?"" and "do we need more training data~\{zhu2016we}?" highlight that large-scale datasets have increasingly become a contraint rathen than a beneficial resource. 
+
+% Here about DD
+Towards that, dataset distillation (DD) has been proposed as a remedy~\{10273632}. 
+DD aprroaches synthesize smaller synthetic datasets that preserve the important representation characteristics of their original counterpart and at the same time achieve similar results. 
+However these methods still generate new data in an ecosystem already burdened by data overload and significant computational cost.σ
+
+
+In this work, we take a different stance and investigate whether sustainable AI can be advanced through dataset filtering rather than dataset synthesis. 
+We argue that it is feasible to capture specific instances, within a training dataset, that are the most representative ones and preserve the networks decision information, resulting faster and thus more energy efficient training.
+We analyze the trade-off between subset size, accuracy, and training cost and show that carefully filtered real-data subsets can rival large-scale datasets in termes of accuracy. 
+We 
 
 
 \section{Method}
