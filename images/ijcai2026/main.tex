@@ -120,7 +120,23 @@ We
 
 \section{Method}
 
-Explain the idea.
+The main idea of  the proposed approach is that in a contrastive learning approach we want to maximize the value we 
+get from the labelling. 
+
+We hypothesize that the representative instances i.e the ones closest to the classes centroid are not informed 
+of the classes true extend and even more so of the nuances of the boundarie between this classe and the other classes.
+
+Based on the above we claim that coreset selection should be biased towards the instances further away from the centroid, without completely 
+discarding representative instances. 
+
+
+To establish the validity of this hypothesis we developed the following method:
+
+At~\cite{doshi-rinal-bhadka-etal:2013} the authors proposed a data clustering mining algorithm i.e a fast and greedy algorithm to select k points from a cluster. 
+The first center is selected randomly the second is greedily select the point furthest from the first and the remaining centers are determined    
+
+
+  
 Use synthetic data to demonstrate how it works.
 
 
@@ -132,6 +148,9 @@ Experimental setup.
 
 Results and discussion.
 
+\section{Discussion}
+
+The observed that the choosen boundaries reflect the dimensionality of the dataset.
 
 \section{Conclusions}
 
