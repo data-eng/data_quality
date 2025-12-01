@@ -124,16 +124,32 @@ The main idea of  the proposed approach is that in a contrastive learning approa
 get from the labelling. 
 
 We hypothesize that the representative instances i.e the ones closest to the classes centroid are not informed 
-of the classes true extend and even more so of the nuances of the boundarie between this classe and the other classes.
+of the classes true extend and even more so of the nuances of the boundaries between this class and the other classes.
 
-Based on the above we claim that coreset selection should be biased towards the instances further away from the centroid, without completely 
-discarding representative instances. 
+Based on the above we claim that coreset selection should be biased towards the instances further away from the centroid, without completely discarding representative instances. 
+
 
 
 To establish the validity of this hypothesis we developed the following method:
 
 At~\cite{doshi-rinal-bhadka-etal:2013} the authors proposed a data clustering mining algorithm i.e a fast and greedy algorithm to select k points from a cluster. 
-The first center is selected randomly the second is greedily select the point furthest from the first and the remaining centers are determined    
+The first center is selected randomly the second is greedily select the point furthest from the first.
+Each subsequent center is selected as the point that maximize the minimum distance to the closest already selected centers. 
+Thus this algorithm has a bias to the boundaries of the cluster and then choose instances from the inside in order to evenly choose intances for the cluster.
+
+Furthermore, at~\cite{khan-kafi-sarker-etall:2021} the authors utilize cosine similarity to assign data to clusters showing its benefits compared with the euclidean one.
+Towards that we adopted the same cosine metric to the above methodolody of the furthers-first clustering approach.
+
+
+
+
+
+The autoencoders are used for non-linead dimentionality reduction while preserving the important characteristics of each sample.
+Additionally, variational autoencoders provide a propabilistic latent representation. 
+
+Here we utilized the pre-trained SD VAE which is trained on the COCO dataset and encodes all the important information into an informative comporessed latent space.
+
+Instead of performing instance selection directly at the raw VAE's latent space we trained an embedding network on top of the VAE with a discriminative head to produce features.
 
 
   
