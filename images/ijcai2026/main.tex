@@ -112,10 +112,10 @@ DD aprroaches synthesize smaller synthetic datasets that preserve the important 
 However these methods still generate new data in an ecosystem already burdened by data overload and significant computational cost.
 
 
-In this work, we take a different stance and investigate whether sustainable AI can be advanced through dataset filtering rather than dataset synthesis. 
-We argue that it is feasible to capture specific instances, within a training dataset, that are the most representative ones and preserve the networks decision information, resulting faster and thus more energy efficient training.
-We analyze the trade-off between subset size, accuracy, and training cost and show that carefully filtered real-data subsets can rival large-scale datasets in termes of accuracy. 
-We 
+In this work, we take a different stance and investigate whether sustainable AI can be advanced through coreset selection rather than dataset synthesis. 
+We argue that it is feasible to capture specific instances, within a training dataset, that are the most informative ones and preserve the networks decision information, resulting faster and thus more energy efficient training.
+We analyze the trade-off between subset size, accuracy, and training cost and show that carefully selected coreset can rival large-scale datasets in termes of accuracy. 
+ 
 
 
 \section{Method}
@@ -130,7 +130,25 @@ Based on the above we claim that coreset selection should be biased towards the 
 
 
 
+
 To establish the validity of this hypothesis we developed the following method:
+
+
+
+\subsection{Variational Autoencoder}
+
+
+The autoencoders are used for non-linead dimentionality reduction while preserving the important characteristics of each sample.
+Variational autoencoders provide a propabilistic latent representation. 
+
+Here we utilized the pre-trained SD VAE which is trained on the COCO dataset and encodes all the important information into an informative comporessed latent space.
+
+Instead of performing instance selection directly at the raw VAE's latent space we trained an embedding network on top of the VAE with a discriminative head to produce features.
+
+\subsection{Feature Discrimination}
+
+
+\subsection{Filtering}
 
 At~\cite{doshi-rinal-bhadka-etal:2013} the authors proposed a data clustering mining algorithm i.e a fast and greedy algorithm to select k points from a cluster. 
 The first center is selected randomly the second is greedily select the point furthest from the first.
@@ -139,17 +157,6 @@ Thus this algorithm has a bias to the boundaries of the cluster and then choose 
 
 Furthermore, at~\cite{khan-kafi-sarker-etall:2021} the authors utilize cosine similarity to assign data to clusters showing its benefits compared with the euclidean one.
 Towards that we adopted the same cosine metric to the above methodolody of the furthers-first clustering approach.
-
-
-
-
-
-The autoencoders are used for non-linead dimentionality reduction while preserving the important characteristics of each sample.
-Additionally, variational autoencoders provide a propabilistic latent representation. 
-
-Here we utilized the pre-trained SD VAE which is trained on the COCO dataset and encodes all the important information into an informative comporessed latent space.
-
-Instead of performing instance selection directly at the raw VAE's latent space we trained an embedding network on top of the VAE with a discriminative head to produce features.
 
 
   
