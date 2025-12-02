@@ -147,6 +147,10 @@ Instead of performing instance selection directly at the raw VAE's latent space 
 
 \subsection{Feature Discrimination}
 
+Feature discrimination is an important challenge in computer vision..
+It is important that embeddings exhibit high discrimination along different classes as well as intra-class compactness. 
+Towards that the authors at~\cite{kansizoglou-santavas-etal:2020} proposed a class hyperplane-based segregation on the contrary of the common class centers separation scheme.
+
 
 \subsection{Filtering}
 
@@ -155,7 +159,7 @@ The first center is selected randomly the second is greedily select the point fu
 Each subsequent center is selected as the point that maximize the minimum distance to the closest already selected centers. 
 Thus this algorithm has a bias to the boundaries of the cluster and then choose instances from the inside in order to evenly choose intances for the cluster.
 
-Furthermore, at~\cite{khan-kafi-sarker-etall:2021} the authors utilize cosine similarity to assign data to clusters showing its benefits compared with the euclidean one.
+Furthermore, at~\cite{khan-kafi-sarker-etal:2021} the authors utilize cosine similarity to assign data to clusters showing its benefits compared with the euclidean one.
 Towards that we adopted the same cosine metric to the above methodolody of the furthers-first clustering approach.
 
 
@@ -168,6 +172,8 @@ Use synthetic data to demonstrate how it works.
 Related work.
 
 Experimental setup.
+
+% https://github.com/Spijkervet/SimCLR/
 
 Results and discussion.
 
