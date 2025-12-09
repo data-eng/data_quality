@@ -115,7 +115,15 @@ However these methods still generate new data in an ecosystem already burdened b
 In this work, we take a different stance and investigate whether sustainable AI can be advanced through coreset selection rather than dataset synthesis. 
 We argue that it is feasible to capture specific instances, within a training dataset, that are the most informative ones and preserve the networks decision information, resulting faster and thus more energy efficient training.
 We analyze the trade-off between subset size, accuracy, and training cost and show that carefully selected coreset can rival large-scale datasets in termes of accuracy. 
- 
+Moreover, trought extensive experimentation we outline that model's accuracy does not necessarly depict the quality of the coreset, however model's accuracy is higly assosiated with the models properties. 
+
+In summary the contributions of this works are:
+\begin{itemize}
+	\item a latent-space discrimination framework that leverages a pretrained diffusion model as a frozen encoder,
+	\item a lightweight weigth embedder with a hyperplane assigned softmax head, ensuring class discriminative feature vectors,
+	\item a cosine fartherst-first coreset selection approach for the discriminative feature space,
+	\item an extensive experimentation on multiple networks, highlight the computational costs of different approaches for the coreset selection.
+\end{itemize}
 
 
 \section{Method}
@@ -131,23 +139,26 @@ Based on the above we claim that coreset selection should be biased towards the 
 
 
 
-To establish the validity of this hypothesis we developed the following method:
+To establish the validity of this hypothesis we developed the following method.
+Initially, we employ a pretrained variational autoencoder (VAE) to project the input data into an informative, compressed latent space, avoiding additional training cost. 
+On top of this latent representation, we introduce a lightweight embedding network coupled with a discriminative classification head to enforce feature-space separability across classes.
+Finally, we apply a cosine farthest-first coreset selection strategy, which is explicitly biased toward samples lying near class boundaries, in order to construct a compact yet informative coreset of instances.
 
 
 
-\subsection{Variational Autoencoder}
+\subsection{Informative discriminated feature space}
 
 
 The autoencoders are used for non-linead dimentionality reduction while preserving the important characteristics of each sample.
-Variational autoencoders provide a propabilistic latent representation. 
+Variational autoencoders provide a propabilistic latent representation rather than a simple deterministic latent. 
+Here we utilized a pre-trained Stable Diffusion (SD) VAE~\cite{fotiadis-valencia-etal:2022,rombach-blattmann-etal:202}, pretrained on the COCO dataset which encodes the input to a compressed latent $z\in\mathbb{R}^(Bx4x(H/8)x(W/8))$, where $B$ the batch size, $4$ the number of channels, $H$ image's height and $W$ the width.
+The VAE is frozen ensuring no additional computational costs.
 
-Here we utilized the pre-trained SD VAE which is trained on the COCO dataset and encodes all the important information into an informative comporessed latent space.
+Although the SD-VAE latent space already holds the most important informations, it is not guaranteed that tha features are also discriminated.
+Instead of performing instance selection directly in this raw latent space, we train a lightweight embedding network on top of the VAE latents, along with a discriminative hyperplane-assisted softmax head~\cite{kansizoglou2020haseparator}, to obtain inter-class discrimination and intra-class compactness. 
+These discriminative embeddings are then used as the feature space on which we apply our cosine farthest-first coreset selection procedure, which focuses on selecting informative and boundary-biased representatives for each class.
 
-Instead of performing instance selection directly at the raw VAE's latent space we trained an embedding network on top of the VAE with a discriminative head to produce features.
-
-\subsection{Feature Discrimination}
-
-Feature discrimination is an important challenge in computer vision..
+Feature discrimination is an important challenge in computer vision.
 It is important that embeddings exhibit high discrimination along different classes as well as intra-class compactness. 
 Towards that the authors at~\cite{kansizoglou-santavas-etal:2020} proposed a class hyperplane-based segregation on the contrary of the common class centers separation scheme.
 
@@ -170,7 +181,6 @@ The goal is to obtain a feature space that holds all the necessary encoded infor
 This space form the basis for instance selection.
 
 
-Given an input imageInitially 
 
 
 Use synthetic data to demonstrate how it works.
@@ -179,6 +189,32 @@ Use synthetic data to demonstrate how it works.
 \section{Experiments and Results}
 
 Related work.
+%here add the the GPU of the hercules
+
+We run all experiments on a GPU. 
+For CIFAR-10 we train each model for 250 epochs, while for MNIST we train for 50 epochs. 
+Additionally, we use AdamW with a learning rate of $2 \times 10^{-3}$ and weight decay $1 \times 10^{-4}$. 
+For coreset subset selection, we select instances at subsets from $10\%$ to $90\%$ in steps of $10\%$.
+
+To assess whether our coreset selection is model-agnostic, we first compute a single set of coresets on CIFAR-10 using our latent ConvNet embedder and cosine $k$-center selection. 
+Afterward, we discard the VAE and embedder and train a range of standard baseline architectures \emph{from scratch} on each selected subset, without using any pretrained model. 
+The resulting test accuracies for ConvNet, ResNet-18/50/101, and DenseNet-169 are reported in Table~\ref{tab:model_agnostic}. 
+These results show that the same coreset, chosen in the latent ConvNet feature space, transfers well to substantially larger backbones, which achieve high accuracy even at small coresets.
+
+To quantify the computational cost associated with these baselines, Table~\ref{tab:trainable_parameters} reports the number of trainable parameters for each architecture, while Table~\ref{tab:training_time} summarizes the end-to-end training time (in minutes) on CIFAR-10 for each model and data subset. 
+Together, these tables highlight that larger models (e.g., ResNet-101, DenseNet-169) benefit more from our coreset selection in terms of final accuracy, but at the price of significantly increased training time and trainable parameters compared to our custom ConvNet.
+
+Additionally, Table~\ref{tab:conv_vs_res_emb} compares two coreset selection setups. 
+In the first case, we train our latent ConvNet embedder and use its feature space on which cosine $k$-center selection is performed. 
+Each distilled subset (from 10\% to 90\% of the training data) is then used to train a classifier with the same ConvNet. 
+In the second case, we repeat the entire procedure using a ResNet-18 as latent embedder instead.
+
+Across all data coresets, the ConvNet selected coreset consistently yields substantially higher test accuracy than the ResNet-18-based one (e.g., 53.09\% vs.\ 39.46\% at 10\%, and 76.32\% vs.\ 44.20\% at 90\%). 
+This suggests that, under a fixed training coreset, a deeper embedder does not automatically provide a better feature space for coreset selection.
+Thus, ResNet-18 appears undertrained in this setting and produces less useful embeddings for making coreset selection less efficient. 
+In practice, a compact latent ConvNet can be a more effective and computationally efficient choice for coreset selection.
+
+
 
 \begin{table}[h!]
     \centering
@@ -186,27 +222,85 @@ Related work.
     \label{tab:performance_data}
     \begin{tabular}{lccccccccc}
         \toprule
-        \textbf{Approach} & \textbf{10\%} & \textbf{20\%} & \textbf{30\%} & \textbf{40\%} & \textbf{50\%} & \textbf{60\%} & \textbf{70\%} & \textbf{80\%} & \textbf{90\%} \\
+        \textbf{Approach} & \textbf{10\%} & \textbf{20\%} & \textbf{30\%} & \textbf{40\%} & \textbf{50\%} & \textbf{60\%} & \textbf{60\%} & \textbf{100\%} \\
         \midrule
-        GradMatch~\cite{killamsetty-ksrishnateja-etal:2021} &  \\
-        Ours &  \\
+        GraNd~\cite{} & 52.7 & 78.2&  91.2 & 93.7 & 94.6 & 95.0 & 95.5 & 95.6.
+        GradMatch~\cite{killamsetty-ksrishnateja-etal:2021} & 61.5 & 79.9 &87.4 & 90.4 & 92.9 & 93.2 & 93.7 & 95.6\\
+        Ours & \textbf{79.21}& \textbf{86.22} & 89.59 & 91.19& 92.42& 93.19 & 94.38 & 95.6\\
         \bottomrule
     \end{tabular}
 \end{table}
 
 \begin{table}[h!]
     \centering
-    \caption{Test Accuracy at Model-Agnostic Coreset Selection on CIFAR10.}
+    \caption{Test Accuracy at Model-Agnostic Coreset Selection on CIFAR10 with ConvNet as embedding.}
     \label{tab:model_agnostic}
     \begin{tabular}{lccccccccc}
         \toprule
         \textbf{Model} & \textbf{10\%} & \textbf{20\%} & \textbf{30\%} & \textbf{40\%} & \textbf{50\%} & \textbf{60\%} & \textbf{70\%} & \textbf{80\%} & \textbf{90\%} \\
         \midrule
-        Custom Convnet & 53.09 & 61.81 & 65.71 & 68.65 & 70.07 & 72.24 & 73.79 & 74.99 & 76.32 \\
+        ConvNet & 53.09 & 61.81 & 65.71 & 68.65 & 70.07 & 72.24 & 73.79 & 74.99 & 76.32 \\
         Resnet-18 & 79.21& 86.22 & 89.59 & 91.19& 92.42& 93.19 & 93.56& 93.58& 94.38 \\
-        Resnet-50 & 72.32 & 84.87 & 88.21 & 90.98& 91.63 & 92.54 & 93.06 & 93.65&94.10 \\
+        Resnet-50 & 72.32 & 84.87 & 88.21 & 90.98& 91.63 & 92.54 & 93.06 & 93.65& 94.10 \\
         Resnet-101& 74.47 & 85.92 & 89.59 & 91.37& 92.66 & 93.62 & 93.98& 94.44& 94.79 \\
         Densenet-169 &  76.74 & 86.48 & 89.65 &91.62 &92.69& 93.22& 94.34&94.72 & 94.93 \\
+
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+
+
+\begin{table}[h!]
+    \centering
+    \caption{Test Accuracy at ResNet-18 with Convnet as embedding vs Resnet-18 as embedding}
+    \label{tab:conv_vs_res_emb}
+    \begin{tabular}{lccccccccc}
+        \toprule
+        \textbf{Model} & \textbf{10\%} & \textbf{20\%} & \textbf{30\%} & \textbf{40\%} & \textbf{50\%} & \textbf{60\%} & \textbf{70\%} & \textbf{80\%} & \textbf{90\%} \\
+        \midrule
+        ConvNet & 53.09 & 61.81 & 65.71 & 68.65 & 70.07 & 72.24 & 73.79 & 74.99 & 76.32\\
+        Resnet-18 & 39.46 &40.74 &40.50 &40.70& 41.95& 40.52& 41.94 & 42.21 & 44.20 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+
+\begin{table}[h!]
+    \centering
+    \caption{Test Accuracy of Coreset Selection for MNIST on Different Embeddings.}
+    \label{tab:}
+    \begin{tabular}{lccccccccc}
+        \toprule
+        \textbf{Model} & \textbf{10\%} & \textbf{20\%} & \textbf{30\%} & \textbf{40\%} & \textbf{50\%} & \textbf{60\%} & \textbf{70\%} & \textbf{80\%} & \textbf{90\%} & \textbf{Full dataset}\\
+        \midrule
+        ConvNet & 98.85 & 98.91& 98.98 &98.98& 99.10 & 99.11& 99.12& 99.17 & 98.92 & 99.15\\
+        Tiny & 
+        Raw & \\
+
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+
+
+\begin{table}[h!]
+    \centering
+    \caption{Total Trainable Parameters}
+    \label{tab:trainable_parameters}
+    \begin{tabular}{lccccccccc}
+        \toprule
+        \textbf{Model} & \textbf{Trainable parameters} \\
+        \midrule
+        %MNIST 
+        Tiny & 926 \\
+        Custom Convnet & 907648 \\
+        % CIFAR 10
+        Custom Convnet & 924160 \\
+        Resnet-18 & 11181642\\
+        Resnet-50 & 23528522\\
+        Resnet-101& 42520650 \\
+        Densenet-169 & 12501130 \\
 
         \bottomrule
     \end{tabular}
@@ -221,14 +315,19 @@ Related work.
         \textbf{Model} & \textbf{10\%} & \textbf{20\%} & \textbf{30\%} & \textbf{40\%} & \textbf{50\%} & \textbf{60\%} & \textbf{70\%} & \textbf{80\%} & \textbf{90\%} \\
         \midrule
         Custom Convnet &  15.16 & 20.42 & 25.99 & 31.48 & 36.96 & 42.27 &47.77 & 53.24 & 58.87 \\
-        Resnet-18 &  23.70 & 30.27& 37.30 & 44.10& 51.16& 58.01& 65.02& 42.71& 80.23\\
-        Resnet-50 &  14.67& 20.80&  26.75& 32.82& 38.82 & 44.83& 50.67 & 72.81& 112.16\\
+        Resnet-18 &  23.70 & 30.27& 37.30 & 44.10& 51.16& 58.01& 65.02& 42.71& 80.23 \\
+        Resnet-50 &  14.67& 20.80&  26.75& 32.82& 38.82 & 44.83& 50.67 & 72.81& 112.16 \\
         Resnet-101 & 37.29  &56.98  & 76.58 & 95.81& 114.91& 134.52& 153.47 & 173.08& 192.65 \\
         Densenet-169 & 37.39 & 57.86& 78.43& 98.43& 118.87& 138.99& 159.34& 180.04& 200.33\\
 
         \bottomrule
     \end{tabular}
 \end{table}
+
+We tested multimple embedding networks of progressive complexity and numbers of trainable parameters.
+
+
+
 Experimental setup.
 
 % https://github.com/Spijkervet/SimCLR/
