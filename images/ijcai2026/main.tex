@@ -306,7 +306,7 @@ Finally, we apply global average pooling over the spatial dimensions, flatten th
 layer to project them to a $d$-dimensional embedding vector $\mathbf{f} \in \mathbb{R}^{d}$.
 This vector is then fed into the HASeparator head, which produces the normalized embedding 
 $\mathbf{z}'$ used for coreset selection.
-Overall, this ConvNet acts as a compact task-specific adapter on top of the frozen VAE latent space, 
+Overall, this ConvNet transfers  the frozen VAE latent space to a constrastive feature space, 
 transforming features into a discriminative contrastive space that is well suited for our cosine $k$-center coreset selection.
 
 \begin{figure}[t]
