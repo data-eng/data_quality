@@ -295,13 +295,50 @@ this farthest-first selection with cosine distance, which yields a
 class-aware coreset selection method biased to class's borders in the learned
 contrastive space.
 
+
+The ConvNet embedder operates directly on VAE latents $\mathbf{z} \in \mathbb{R}^{4 \times (H/8) \times (W/8)}$ and is
+deliberately kept small to reduce computational cost while preserving discriminative power. 
+Its building block is shown in Fig.~\ref{fig:conv_block}.
+The full ConvNet architecture is depicted in Fig.~\ref{fig:convnet}. 
+A $4$-channel input latent first passes through a input layers consisting of a 2-D convolution, GroupNorm and SiLU activation.
+The resulting feature map is processed by three residual blocks as defined above, all at the same spatial resolution.
+Finally, we apply global average pooling over the spatial dimensions, flatten the pooled features, and use a linear
+layer to project them to a $d$-dimensional embedding vector $\mathbf{f} \in \mathbb{R}^{d}$.
+This vector is then fed into the HASeparator head, which produces the normalized embedding 
+$\mathbf{z}'$ used for coreset selection.
+Overall, this ConvNet acts as a compact task-specific adapter on top of the frozen VAE latent space, 
+transforming features into a discriminative contrastive space that is well suited for our cosine $k$-center coreset selection.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{methodology}
+  \caption{Overview of the proposed methodology. Input images are encoded by a frozen VAE into latents $z$, which are passed through a ConvNet embedder and HASeparator head to produce normalized embeddings $z'$ used for coreset selection.}
+  \label{fig:methodology}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.28\linewidth]{figures/convnet}
+  \caption{Latent ConvNet embedder architecture for the 4-channel VAE latent as input.}
+  \label{fig:convnet}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.25\linewidth]{convnet}
+  \caption{Residual block used in the latent ConvNet embedder.}
+  \label{fig:conv_block}
+\end{figure}
+
+
+
 \section{Experiments and Results}
 
 Related work.
 %here add the the GPU of the hercules
 
 All experiments were conducted on a single NVIDIA H100 NVL GPU.
-For CIFAR-10 we train each model for 250 epochs, while for MNIST we train for 50 epochs. 
+For CIFAR-10 we train each model for 250 epochs. %, while for MNIST we train for 50 epochs. 
 Additionally, we use AdamW with a learning rate of $2 \times 10^{-3}$ and weight decay $1 \times 10^{-4}$. 
 For coreset subset selection, we select instances at subsets from $10\%$ to $90\%$ in steps of $10\%$, as well as smaller subsets of $0.1\%$,$0.5\%$, $1\%$ and $5\%$.
 Moreover, coresets are selected from the latent feature space of our ConvNet embedder trained 
@@ -425,21 +462,21 @@ choice for coreset selection.
 \end{table}
 
 
-\begin{table}[h!]
-    \centering
-    \caption{Test Accuracy of Coreset Selection for MNIST on Different Embeddings.}
-    \label{tab:}
-    \begin{tabular}{lccccccccc}
-        \toprule
-        \textbf{Model} & \textbf{10\%} & \textbf{20\%} & \textbf{30\%} & \textbf{40\%} & \textbf{50\%} & \textbf{60\%} & \textbf{70\%} & \textbf{80\%} & \textbf{90\%} & \textbf{Full dataset}\\
-        \midrule
-        ConvNet & 98.85 & 98.91& 98.98 &98.98& 99.10 & 99.11& 99.12& 99.17 & 98.92 & 99.15\\
-        Tiny & 
-        Raw & \\
+% \begin{table}[h!]
+%     \centering
+%     \caption{Test Accuracy of Coreset Selection for MNIST on Different Embeddings.}
+%     \label{tab:}
+%     \begin{tabular}{lccccccccc}
+%         \toprule
+%         \textbf{Model} & \textbf{10\%} & \textbf{20\%} & \textbf{30\%} & \textbf{40\%} & \textbf{50\%} & \textbf{60\%} & \textbf{70\%} & \textbf{80\%} & \textbf{90\%} & \textbf{Full dataset}\\
+%         \midrule
+%         ConvNet & 98.85 & 98.91& 98.98 &98.98& 99.10 & 99.11& 99.12& 99.17 & 98.92 & 99.15\\
+%         Tiny & 
+%         Raw & \\
 
-        \bottomrule
-    \end{tabular}
-\end{table}
+%         \bottomrule
+%     \end{tabular}
+% \end{table}
 
 
 
@@ -483,11 +520,9 @@ choice for coreset selection.
     \end{tabular}
 \end{table}
 
-We tested multimple embedding networks of progressive complexity and numbers of trainable parameters.
 
 
 
-Experimental setup.
 
 % https://github.com/Spijkervet/SimCLR/
 
