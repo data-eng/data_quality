@@ -1,0 +1,17 @@
+\begin{table*}[t]
+    \centering
+    \caption{Test Accuracy at Model-Agnostic Coreset Selection on CIFAR10 with ConvNet as embedding.}
+    \label{tab:model_agnostic}
+    \begin{tabular}{lccccccccc}
+        \toprule
+        \textbf{Model} & \textbf{10\%} & \textbf{20\%} & \textbf{30\%} & \textbf{40\%} & \textbf{50\%} & \textbf{60\%} & \textbf{70\%} & \textbf{80\%} & \textbf{90\%} \\
+        \midrule
+        ConvNet & 53.09 & 61.81 & 65.71 & 68.65 & 70.07 & 72.24 & 73.79 & 74.99 & 76.32 \\
+        Resnet-18 & 79.21& 86.22 & 89.59 & 91.19& 92.42& 93.19 & 93.56& 93.58& 94.38 \\
+        Resnet-50 & 72.32 & 84.87 & 88.21 & 90.98& 91.63 & 92.54 & 93.06 & 93.65& 94.10 \\
+        Resnet-101& 74.47 & 85.92 & 89.59 & 91.37& 92.66 & 93.62 & 93.98& 94.44& 94.79 \\
+        Densenet-169 &  76.74 & 86.48 & 89.65 &91.62 &92.69& 93.22& 94.34&94.72 & 94.93 \\
+
+        \bottomrule
+    \end{tabular}
+\end{table*}
