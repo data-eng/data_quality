@@ -24,9 +24,6 @@
 \usepackage{algorithmic}
 \usepackage[switch]{lineno}
 
-% Comment out this line in the camera-ready submission
-\linenumbers
-
 \urlstyle{same}
 
 % the following package is optional:
@@ -38,6 +35,9 @@
 % template and that you must *not* alter the styling.
 \newtheorem{example}{Example}
 \newtheorem{theorem}{Theorem}
+
+\newcommand{\quoted}[1]{`#1'}
+
 
 % Following comment is from ijcai97-submit.tex:
 % The preparation of these files was supported by Schlumberger Palo Alto
@@ -70,7 +70,7 @@
 
 \title{Selecting Images}
 
-\iffalse
+\iftrue
 \author{
 Katerina Oikonomou \and Stasinos Konstantopoulos
 \affiliations
@@ -78,9 +78,10 @@ Institute of Informatics and Telecommunications
 \\ NCSR `Demokritos',
 Ag. Paraskevi, Greece
 \emails
-\{first, second\}@iit.demokritos.gr
+\{koikonomou, konstant\}@iit.demokritos.gr
 }
 \else
+\linenumbers
 \author{
 Anonymous
 \affiliations
@@ -89,6 +90,7 @@ Affiliation
 anonymous@affiliation
 }
 \fi
+
 
 \begin{document}
 
@@ -101,125 +103,47 @@ anonymous@affiliation
 
 \section{Introduction}
 
-% Positioning. Background.
-Sustainable AI has emerged in an era where AI workload enormously increase the data center emissions~\cite{jha-etal:2025}. 
-Computationally expensive and time-consuming neural networks are being trained daily with massive datasets, while the demand for even larger, better or more task-oriented datasets shows no sign of slowing down.
-Questiong like: "How much more data do I need~\cite{mahmood-etal:2022}?" and "do we need more training data~\cite{zhu-vondrick-etal:2016}?" highlight that large-scale datasets have increasingly become a contraint rathen than a beneficial resource. 
-
-
-In the context of dataset reduction, two main research directions have emerged:
-\emph{coreset selection} and \emph{dataset distillation}. 
-Coreset methods work directly on real samples and aim to pick a small subset
-that preserves the information characteristics of the full dataset, typically by
-optimizing geometry, or gradient similarity.
-On the other hand, distillation~\cite{lei-tao:2024} synthesizes a tiny set of artificial dataset whose training
-dynamics mimic those of the original dataset, often using generative models or 
-trajectory matching in pixel or latent space.
-
-Recent work~\cite{moser-shanbhag-etal:2025} has highlighted several structural limitations of existing coreset methods.
-Training-free, geometry-based approaches such as Herding~\cite{welling:2009} or 
-$k$-Center Greedy~\cite{sener-savarese:2017} crucially depend on the quality of the feature extractor. 
-If the embedding does not faithfully capture the class structure, selection tends to pick arbitrary
-points with good geometric coverage but poor alignment with the final decision boundary.
-Training-oriented approaches such as CAL~\cite{margatina-vernikos-barrault:2021} and 
-DeepFool~\cite{ducoffe-precioso:2018} mitigate
-this by exploiting training dynamics with decision boundary based methodologies, 
-but with a high cost at runtimes that makes them difficult at scale.
-
-
-Lastly, compared to the dataset distillation, coreset selection is applied to a 
-various domains.
-It has been proven valuable for imbalanced datasets~\cite{sivasubramanian-aagalapatti-etal:2024,luo-zhao-etal:2024}, continual learning approaches~\cite{titsias-schwarz-etal:2019,mirzadeh-farajtabar-etal:2020}, 
-machine unlearning~\cite{bourtoule-chandrasekaran-etal:2021} or even large languare models~\cite{killamsetty-zhao-etal:2021} and self-supervised approaches~\cite{kim-bae-yun:2023,singh-vashishtha-etal:2025}, further emphasizing the importance of effective and efficienct coreset selection methodologies.
-
-
-
-% In this work, we take a different stance and investigate whether sustainable AI can be advanced through coreset selection rather than dataset synthesis. 
-We argue that it is feasible to capture specific instances, within a training dataset, that are the most informative ones and preserve the networks decision information, with a lightweight approach, resulting faster and thus more energy efficient training.
-We analyze the trade-off between subset size, accuracy, and training cost and show that carefully selected coreset can rival large-scale datasets in termes of accuracy. 
-
-
-In summary the contributions of this works are:
-\begin{itemize}
-	\item a latent-space discrimination framework that leverages a pretrained diffusion model as a frozen encoder,
-	\item a lightweight weigth embedder with a hyperplane assigned softmax head, ensuring class discriminative feature vectors,
-	\item a cosine fartherst-first coreset selection approach for the discriminative feature space,
-	\item an extensive experimentation on multiple networks, highlight the computational costs of different approaches for the coreset selection.
-\end{itemize}
 
 
 \section{Method}
 
-Data distillation, data selection and, in fact, most modern ANN
-approaches follow a general pattern where the raw data is first mapped
-to a learned latent representation that reduces the dimensionality of
-the input. This approach offers the great benefit of mapping the data
-to a more informative, compressed space where the transformations
-applied by subsequent network layers can be more effectively learned.
-It also offers the computational benefit that such latent representations
-can be learned in an unsupervised manner, making them re-usable across 
-learning tasks over the same kind of data.
-
-The work described here is positioned as follows with respect to the main
-body of literature in dataset reduction:
+Our three-step method for selecting which images to use in a
+downstream machine learning task proceeds as follows:
 %
-\begin{itemize}
+\begin{enumerate}
+\item Projection to unsuervised latent space
+\item Further projection to supervised contrastive space
+\item Instance sampling
+\end{enumerate}
 
-\item Data distilation: There should be no need to synthesise
-  characteristic instances in a large dataset, we hypothesise that
-  such a dataset already has the characteristic instances we need if
-  we can select them,
-\item Core set selection: Aiming for the most characteristic instances
-  of each class will achieve the bulk of the accuracy, but is likely
-  to miss nuanced distinctions. We hypothesise that selection should
-  be driven by the difficulty or complexity of the distinctions that
-  need to be learned, or, in other words, that selection should be
-  biased not towards the most characteristic, central instances but
-  towards the `difficult' cases, the ones that define the borders
-  between classes.
-\end{itemize}
-%
-Putting these two together, we hypothesise that a selection method can
-be as effective as distilation (but at a lower computational cost),
-and that the best strategy is to make a selection that is denser at
-the periphery of a class than at its core.
 
-To test this hypothesis we developed our three-step method for
-selecting the most informative images to use for an image
-classification task:
-%
-\begin{itemize}
-\item Projection to latent space
-\item Further projection to contrastive space
-\item Instance selection
-\end{itemize}
+\subsection{Instance representation}
+
+% https://huggingface.co/stabilityai/sd-vae-ft-mse-original
+% https://github.com/Spijkervet/SimCLR/
 
 The first step is to project the input images to an informative,
-compressed latent space, using a pretrained \emph{variational
-autoencoder (VAE)}, specifically a Stable Diffusion (SD)
-VAE~\cite{fotiadis-valencia-etal:2022,rombach-blattmann-etal:2021}
-pretrained on the COCO dataset. The dimensionality of the latent space
-is $(Bx4x(H/8)x(W/8))$, where $B$ the batch size, $4$ the number of
-channels, $H$ the image height and $W$ the image width.
+compressed latent space, using a pretrained
+\emph{variational autoencoder (VAE)}.
+Specifically, we use the \emph{CompVis Stable Diffusion} VAE
+trained on MS-COCO \cite{rombach-blattmann-etal:2021}
+as augemented by Fotiadis et al.~\cite{fotiadis-valencia-etal:2022}.
+The dimensionality of the latent space is
+$(4 \times (H/8) \times (W/8))$, where $4$ is the number of channels
+and $H \times W$ the image dimensions.
 
 Although autoencoders preserve the important characteristics of each
 sample, the resulting space is not expected to meaningfully represent
 the distinction between class-characteristic and class-peripheral
-instances; For such a distinction a \emph{contrastive} space is needed.
-We achieve this by training a lightweight embedding network coupled
-with a discriminative hyperplane-assisted softmax
-head~\cite{kansizoglou-santavas-etal:2020} to obtain inter-class
-discrimination and intra-class compactness. Note that the VAE is
-frozen during this training.
-
-% UNCLEAR, TBD
-Feature discrimination is an important challenge in computer vision.
-It is important that embeddings exhibit high discrimination along
-different classes as well as intra-class compactness. Towards that,
-Kansizoglou et al. [\citeyear{kansizoglou-santavas-etal:2020}]
-proposed a class hyperplane-based segregation on the contrary of the
-common class centers separation scheme.
-
+instances; For such a distinction we must construct a \emph{contrastive}
+space that gives inter-class discrimination and intra-class
+compactness. We achieve this by the supervised training of a
+lightweight embedding network, positioned after the layers
+of the (frozen) VAE. Specifically, we use
+the \emph{HASeparator layer} \cite{kansizoglou-santavas-etal:2020}
+which uses a discriminative \emph{hyperplane-assisted} softmax head to
+give hyperplane-based separation instead of the (more commonly used)
+class-center separation.
 
 In our implementation, the HASeparator layer receives an embedding
 vector $\mathbf{e}_i \in \mathbf{R}^d$ and a learnable weight matrix
@@ -259,42 +183,15 @@ $\mathbf{o}_i$ plus the batch-averaged hyperplane penalty.
 
 Compared to centre-based margin losses, which implicitly assume that 
 the last-layer weights approximate class centres, HASeparator works
-directly with the geometry of the decision boundaries, enforcing large
+directly with the geometry of the decision boundaries to enforce large
 angular gaps between classes while preserving intra-class compactness.
 In our setting, we use the normalized embeddings output by this layer
 as the contrastive feature space on which cosine $k$-center coreset
 selection is performed. As a result, our instance selection operates in
-a space where class borders are explicitly “pushed apart”, making
+a space where class borders are explicitly \quoted{pushed apart}, making
 boundary samples more clearly identifiable and better aligned with our
 goal of biasing the coreset towards difficult, classes boundary
 instances.
-
-
-%We hypothesize that the representative instances i.e the ones closest to the classes centroid are not informed of the classes true extend and even more so of the nuances of the boundaries between this class and the other classes.
-Our selection scheme is inspired by the clustering algorithm of
-Doshi et al.~[\citeyear{doshi-rinal-bhadka-etal:2013}],
-a fast and greedy algorithm to select k points from a cluster.
-The algorithm assumes the distance between an instance and its closest
-previously-selected instance to indicate how well the instance is
-represented by the current selection. The algorithm first selects the
-centroid of the data, then selects the least-represented instance
-(effectively the one furthest away from the centroid), and the
-proceeds to select the instance that least represented by the two
-previously selected intances (the one furthest away from its
-representative, its closest previously-selected instance), and so on.
-Since the instances across the area occupied by the class
-will be furthest away from all previously selected instances, this
-selection strategy will first bounce across the periphery and then
-will sample the inner parts of the class area, with lower preference
-to the core where distances are smaller.
-%
-Following Khan et al.~[\citeyear{khan-kafi-sarker-etal:2021}]
-we utilize cosine similarity as our distance measure in the embedding space.
-In practice, we work with $\ell_2$-normalized embeddings and apply
-this farthest-first selection with cosine distance, which yields a
-class-aware coreset selection method biased to class's borders in the learned
-contrastive space.
-
 
 The ConvNet embedder operates directly on VAE latents $\mathbf{z} \in \mathbf{R}^{4 \times (H/8) \times (W/8)}$ and is
 deliberately kept small to reduce computational cost while preserving discriminative power. 
@@ -331,32 +228,81 @@ transforming features into a discriminative contrastive space that is well suite
 \end{figure}
 
 
-\section{Related Work}
 
-Lots of it:
-\begin{itemize}
-\item Herding~\cite{welling:2009} \\
-\item k-Center Greedy~\cite{sener-savarese:2017} \\ 
-\item Forgetting~\cite{toneva-sordoni-etal:2018} \\
-\item GraNd~\cite{paul-ganguli-etal:2021} \\
-\item CAL~\cite{margatina-vernikos-barrault:2021} \\
-\item DeepFool~\cite{ducoffe-precioso:2018} \\
-\item Craig~\cite{mirzasoleiman-bilmes-leskovec:2020} \\
-\item GradMatch~\cite{killamsetty-ksrishnateja-etal:2021} \\
-\item Glister~\cite{killamsetty-krishnateja-etal:2021} \\
-\item Facility Location~\cite{iyer-khargoankar-etal:2021} \\
-\item Graph Cut~\cite{iyer-khargoankar-etal:2021} \\
-\end{itemize}
+\subsection{Instance sampling}
+
+
+%We hypothesize that the representative instances i.e the ones closest to the classes centroid are not informed of the classes true extend and even more so of the nuances of the boundaries between this class and the other classes.
+
+Our selection scheme is inspired by the clustering algorithm of
+Doshi et al.~[\citeyear{doshi-rinal-bhadka-etal:2013}],
+a fast and greedy algorithm to select k points from a cluster.
+A core concept in this algorithm is that of an instance's
+\emph{representative:} Assume a subset $S$ of the overall set of
+instances; Then for any instance $i$ \emph{not} in $S$, we shall call
+the representative of $i$ the member of $S$ that has the smallest
+distance from $i$. The Doshi et al. algorithm uses this concept
+to measure how well a new instance is represented by each of the
+current clusters. It then selects the worst-represented instance to
+seed a new cluster, until the expected number of clusters has been
+reached.
+
+Our adaptation of this algorithm re-uses the concept of the
+\emph{representative} from the Doshi et al. algorithm to ensure that
+the instances that get added to the core set are those that are
+not well-represented in the current core set. In more detail,
+our sampling method proceeds as follows:
+%
+\begin{enumerate}
+\item Find the centroid of the class. Add it to the core set.
+\item For all instances not in the core set, find the distance to
+  their representative in the core set.
+\item Add the worst-represented instance to the core set.
+\item Repeat from Step 2 until the user-specified core-set size has
+  been reached.
+\end{enumerate}
+%
+This algorithm will first select an outlying instance, the one
+furthest away from the centroid, since in the first iteration all
+instances are represented by the centroid. It will then select an
+instance roughly diametrically opposite to the first instance, since
+that will be furthest away from its representative (the centroid or
+the first instance); and will proceed bouncing around the periphery of
+the class until the periphery has become sampled densely enough that
+samples deeper inside the class area are less well-represented.
+
+Following Khan et al.~[\citeyear{khan-kafi-sarker-etal:2021}]
+we utilize cosine similarity as our distance measure in the embedding space.
+In practice, we work with $\ell_2$-normalized embeddings and apply
+this farthest-first selection with cosine distance, which yields a
+class-aware coreset selection method biased to class's borders in the learned
+contrastive space.
+
+
+%\section{Related Work}
+%
+%Lots of it:
+%\begin{itemize}
+%\item Herding~\cite{welling:2009} \\
+%\item k-Center Greedy~\cite{sener-savarese:2017} \\ 
+%\item Forgetting~\cite{toneva-sordoni-etal:2018} \\
+%\item GraNd~\cite{paul-ganguli-etal:2021} \\
+%\item CAL~\cite{margatina-vernikos-barrault:2021} \\
+%\item DeepFool~\cite{ducoffe-precioso:2018} \\
+%\item Craig~\cite{mirzasoleiman-bilmes-leskovec:2020} \\
+%\item GradMatch~\cite{killamsetty-ksrishnateja-etal:2021} \\
+%\item Glister~\cite{killamsetty-krishnateja-etal:2021} \\
+%\item Facility Location~\cite{iyer-khargoankar-etal:2021} \\
+%\item Graph Cut~\cite{iyer-khargoankar-etal:2021} \\
+%\end{itemize}
 
 
 \section{Experiments and Results}
 
-
-%here add the the GPU of the hercules
-All experiments were conducted on a single NVIDIA H100 NVL GPU.
+%All experiments were conducted on a single NVIDIA H100 NVL GPU.
 
 For CIFAR-10 we train each model for 250 epochs. %, while for MNIST we train for 50 epochs. 
-Additionally, we use AdamW with a learning rate of $2 \times 10^{-3}$ and weight decay $1 \times 10^{-4}$. 
+Additionally, we use AdamW with a learning rate of $2E-3$ and weight decay $1E-4$. 
 For coreset subset selection, we select instances at subsets from $10\%$ to $90\%$ in steps of $10\%$, as well as smaller subsets of $0.1\%$,$0.5\%$, $1\%$ and $5\%$.
 Moreover, coresets are selected from the latent feature space of our ConvNet embedder trained 
 on top of the frozen Stable Diffusion VAE.
@@ -379,8 +325,7 @@ For larger data fractions (30–100\%), all methods converge to very similar per
 as expected when most of the training set is available. 
 Overall, this benchmark indicates that our coreset selection strategy is particularly 
 effective in the smaller subsets, where subset quality matters the most, further highlighting our hypothesis 
-that the most informative instances are the ones at the classed boarders.
-
+that the most informative instances are the ones at the class boarders.
 
 
 Futhermore, to assess whether our coreset selection is model-agnostic, we train a range of standard 
@@ -495,8 +440,6 @@ choice for coreset selection.
     \end{tabular}
 \end{table*}
 
-
-% https://github.com/Spijkervet/SimCLR/
 
 Results and discussion.
 
