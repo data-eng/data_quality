@@ -17,12 +17,14 @@
 \usepackage[utf8]{inputenc}
 \usepackage[small]{caption}
 \usepackage{graphicx}
+\graphicspath{{figures}}
 \usepackage{amsmath}
 \usepackage{amsthm}
 \usepackage{booktabs}
 \usepackage{algorithm}
 \usepackage{algorithmic}
 \usepackage[switch]{lineno}
+\usepackage{siunitx}
 
 \urlstyle{same}
 
@@ -271,6 +273,20 @@ the first instance); and will proceed bouncing around the periphery of
 the class until the periphery has become sampled densely enough that
 samples deeper inside the class area are less well-represented.
 
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\linewidth]{iris}
+\caption{Demonstration of the sampling method on the Iris dataset.}
+\label{fig:iris}
+\end{figure*}
+
+Figure~\ref{fig:iris} gives a graphical explanation of the sampling
+method on the Iris dataset. For the purposes of this explanation we do
+not apply any transformation, but operate directly on the metric space
+of sepal length and sepal width, restricted to I.~setosa and
+I.~versicolor that are immediately separable so no constrastive
+representation is needed.
+
 Following Khan et al.~[\citeyear{khan-kafi-sarker-etal:2021}]
 we utilize cosine similarity as our distance measure in the embedding space.
 In practice, we work with $\ell_2$-normalized embeddings and apply
@@ -301,8 +317,10 @@ contrastive space.
 
 %All experiments were conducted on a single NVIDIA H100 NVL GPU.
 
+
+
 For CIFAR-10 we train each model for 250 epochs. %, while for MNIST we train for 50 epochs. 
-Additionally, we use AdamW with a learning rate of $2E-3$ and weight decay $1E-4$. 
+Additionally, we use AdamW with a learning rate of \num{2e-3} and weight decay \num{1e-4}. 
 For coreset subset selection, we select instances at subsets from $10\%$ to $90\%$ in steps of $10\%$, as well as smaller subsets of $0.1\%$,$0.5\%$, $1\%$ and $5\%$.
 Moreover, coresets are selected from the latent feature space of our ConvNet embedder trained 
 on top of the frozen Stable Diffusion VAE.
@@ -441,11 +459,7 @@ choice for coreset selection.
 \end{table*}
 
 
-Results and discussion.
 
-\section{Discussion}
-
-The observed that the choosen boundaries reflect the dimensionality of the dataset.
 
 \section{Conclusions}
 
