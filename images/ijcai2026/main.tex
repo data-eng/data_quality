@@ -129,7 +129,7 @@ compressed latent space, using a pretrained
 \emph{variational autoencoder (VAE)}.
 Specifically, we use the \emph{CompVis Stable Diffusion} VAE
 trained on MS-COCO \cite{rombach-blattmann-etal:2021}
-as augemented by Fotiadis et al.~\cite{fotiadis-valencia-etal:2022}.
+as augemented by Fotiadis et al.~[\citeyear{fotiadis-valencia-etal:2022}].
 The dimensionality of the latent space is
 $(4 \times (H/8) \times (W/8))$, where $4$ is the number of channels
 and $H \times W$ the image dimensions.
@@ -273,9 +273,9 @@ the first instance); and will proceed bouncing around the periphery of
 the class until the periphery has become sampled densely enough that
 samples deeper inside the class area are less well-represented.
 
-\begin{figure*}[t]
+\begin{figure*}[tb]
 \centering
-\includegraphics[width=\linewidth]{iris}
+\includegraphics[width=0.8\linewidth]{iris}
 \caption{Demonstration of the sampling method on the Iris dataset.}
 \label{fig:iris}
 \end{figure*}
@@ -317,22 +317,26 @@ contrastive space.
 
 %All experiments were conducted on a single NVIDIA H100 NVL GPU.
 
+We compared our method against prior work on core-set selection by
+following the same experimental setup as
+Moser et al.~[\citeyear{moser-shanbhag-etal:2025}] in order to get directly
+comparable results. Specifically, we first apply our method to the
+training fold of CIFAR-10 in order to get core-sets at different fractions
+of the training data, ranging from 0.1\% all the way up to the full dataset.
+A different core-set is prepared for each class and these are concatentated
+into the overall training set for each fraction. These training sets
+are used to train a ResNet-18 network, which is evaluated on the test data.
+ResNet-18 is trained for 250~epochs % MNIST we train for 50 epochs
+using AdamW with a learning rate of \num{2e-3} and weight decay \num{1e-4}. 
+The embeddings created during core-set selection are \emph{not}
+used; that is, ResNet-18 is trained from scratch, on raw images, without
+access to any information about how these images were selected.
 
+\input{tab_performance_data}
+% https://arxiv.org/pdf/2505.17799
 
-For CIFAR-10 we train each model for 250 epochs. %, while for MNIST we train for 50 epochs. 
-Additionally, we use AdamW with a learning rate of \num{2e-3} and weight decay \num{1e-4}. 
-For coreset subset selection, we select instances at subsets from $10\%$ to $90\%$ in steps of $10\%$, as well as smaller subsets of $0.1\%$,$0.5\%$, $1\%$ and $5\%$.
-Moreover, coresets are selected from the latent feature space of our ConvNet embedder trained 
-on top of the frozen Stable Diffusion VAE.
-We first compute L2-normalized embeddings for all training points and then apply the class-aware cosine $k$-center selection, 
-yielding one coreset per target data subset.
-These coresets are then used across all subsequent experiments, including the model-agnostic evaluation.
-
-
-Initially, we compared our method against a broad set of existing data selection 
-and coreset approaches, summarized in Table~\ref{tab:performance_data}.
-All methods are trained from scratch on CIFAR-10 using ResNet-18 as presented in~\cite{moser-shanbhag-etal:2025}, 
-and we report the test accuracy ranging from extremely small subsets (0.1\%, 0.5\%, 1\%) up to the full dataset (100\%).
+Table~\ref{tab:performance_data} gives the evaluation results of our method,
+together with the results reported by Moser et al.
 
 In the very small data subsets (0.1–1\%), our approach clearly outperforms all baselines, 
 achieving 32.74\%, 46.92\%, and 52.11\% test accuracy at 0.1\%, 0.5\%, and 1\% of the data, 
@@ -379,9 +383,6 @@ Thus, ResNet-18 appears undertrained in this setting and produces less useful em
 making coreset selection less efficient. 
 In practice, a compact latent ConvNet can be a more effective and computationally efficient 
 choice for coreset selection.
-
-\input{tab_performance_data}
-% https://arxiv.org/pdf/2505.17799
 
 \input{tab_model_agnostic}
 
