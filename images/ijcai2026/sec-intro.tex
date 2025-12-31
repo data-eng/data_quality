@@ -6,31 +6,10 @@ Computationally expensive and time-consuming neural networks are being trained d
 Questiong like: "How much more data do I need~\cite{mahmood-etal:2022}?" and "do we need more training data~\cite{zhu-vondrick-etal:2016}?" highlight that large-scale datasets have increasingly become a contraint rathen than a beneficial resource. 
 
 
-In the context of dataset reduction, two main research directions have emerged:
-\emph{coreset selection} and \emph{dataset distillation}. 
-Coreset methods work directly on real samples and aim to pick a small subset
-that preserves the information characteristics of the full dataset, typically by
-optimizing geometry, or gradient similarity.
-On the other hand, distillation~\cite{lei-tao:2024} synthesizes a tiny set of artificial dataset whose training
-dynamics mimic those of the original dataset, often using generative models or 
-trajectory matching in pixel or latent space.
-
-Recent work~\cite{moser-shanbhag-etal:2025} has highlighted several structural limitations of existing coreset methods.
-Training-free, geometry-based approaches such as Herding~\cite{welling:2009} or 
-$k$-Center Greedy~\cite{sener-savarese:2017} crucially depend on the quality of the feature extractor. 
-If the embedding does not faithfully capture the class structure, selection tends to pick arbitrary
-points with good geometric coverage but poor alignment with the final decision boundary.
-Training-oriented approaches such as CAL~\cite{margatina-vernikos-barrault:2021} and 
-DeepFool~\cite{ducoffe-precioso:2018} mitigate
-this by exploiting training dynamics with decision boundary based methodologies, 
-but with a high cost at runtimes that makes them difficult at scale.
-
-
 Lastly, compared to the dataset distillation, coreset selection is applied to a 
 various domains.
 It has been proven valuable for imbalanced datasets~\cite{sivasubramanian-aagalapatti-etal:2024,luo-zhao-etal:2024}, continual learning approaches~\cite{titsias-schwarz-etal:2019,mirzadeh-farajtabar-etal:2020}, 
 machine unlearning~\cite{bourtoule-chandrasekaran-etal:2021} or even large languare models~\cite{killamsetty-zhao-etal:2021} and self-supervised approaches~\cite{kim-bae-yun:2023,singh-vashishtha-etal:2025}, further emphasizing the importance of effective and efficienct coreset selection methodologies.
-
 
 
 % In this work, we take a different stance and investigate whether sustainable AI can be advanced through coreset selection rather than dataset synthesis. 
