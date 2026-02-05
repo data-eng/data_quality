@@ -10,7 +10,7 @@ authors = [ "Natalia Koliou <nataliakoliou@iit.demokritos.gr>",
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.13"
+python = ">=3.10,<3.14"
 pandas = "^2.1"
 numpy = "^1.26"
 scipy = "^1.11"
@@ -23,6 +23,8 @@ mne = "^1.7"
 # Image processing
 dlib = "^19.24"
 face_recognition = "*"
+setuptools = "^80.10.2"
+mediapipe = "^0.10.32"
 
 [build-system]
 requires = ["poetry-core"]
