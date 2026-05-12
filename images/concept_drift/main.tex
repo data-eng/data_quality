@@ -1,0 +1,100 @@
+\def\status{0}
+
+\if\status0
+% publisher-neutral
+\documentclass{article}
+\else
+% AIJ
+\documentclass[preprint,12pt]{elsarticle}
+\fi
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{hyperref}
+
+\usepackage{graphicx}
+\graphicspath{{figures}}
+
+\newcommand{\quoted}[1]{`#1'}
+\newcommand{\term}[1]{\emph{#1}}
+
+\def\mytitle{Amazing Results}
+\def\katerina{Katerina Oikonomou}
+\def\stasinos{Stasinos Konstantopoulos}
+\def\ncsr{Institute of Informatics and Telecommunications,
+  \\ NCSR \quoted{Demokritos},
+  \\ Ag. Paraskevi, Greece}
+
+
+\if\status0
+% publisher-neutral
+
+\usepackage{geometry}
+\geometry{a4paper}
+\usepackage{authblk} 
+
+\title\mytitle
+
+\author\katerina
+\author\stasinos
+\affil\ncsr
+\date{}
+
+\begin{document}
+\maketitle
+
+\else
+% AIJ
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title\mytitle
+\author{\katerina\corref{cor1}}
+\ead{email@example.com}
+\author\stasinos
+
+\address\ncsr
+
+\cortext[cor1]{Corresponding author}
+
+\begin{abstract}
+Your abstract goes here. It should provide a concise summary of the research.
+\end{abstract}
+
+\begin{keyword}
+Keyword 1 \sep Keyword 2 \sep Keyword 3
+\end{keyword}
+
+\end{frontmatter}
+
+\fi
+
+
+\section{Introduction}
+
+
+
+
+\section{Background}
+
+
+
+\section{Method}
+
+
+
+\section{Experiments and Results}
+
+
+
+
+\section{Conclusions}
+
+
+\bibliographystyle{elsarticle-num}
+\bibliography{biblio}
+
+\end{document}
+
