@@ -10,7 +10,7 @@
 
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath, amssymb, amsfonts}
-\usepackage{hyperref}
+\usepackage[hidelinks]{hyperref}
 
 \usepackage{graphicx}
 \graphicspath{{figures}}
@@ -74,6 +74,27 @@ Keyword 1 \sep Keyword 2 \sep Keyword 3
 
 \section{Introduction}
 
+For a machine learning deployment, continuous monitoring and
+fine-tuning is a necessity as the data drifts away from the
+distribution that generated the original training data. Adjusting to
+data drift is well-studied task, with a rich literature on both how to
+detect the drift and on how to minimize the amount of labelling
+necessary in order to re-train or fine-tune the system.
+
+In order maximally economize on labelling effort, it makes sense to be
+able to extract as much information as possible from the
+\emph{unlabelled} deployment data, and use this information to
+pin-point the instances that would have the impact on model accuracy.
+
+
+Tran et al. \cite{tran-etal:2026}: concept drift either synthetically
+simulated or simulated by assuming a more fine-grained labelling (such
+as CIFAR-100 or ImageNet) as deployment data after training on CIFAR-10.
+The latter simulates novel classes, but not drift in the class boundaries.
+Synthetic drift sounds a not-very-good idea, will elabortate.
+
+Noting how CIFAR and ImageNet label refer to individual physical
+objects, it is unlikely that a noticeable drift can occur.
 
 
 
@@ -94,7 +115,7 @@ Keyword 1 \sep Keyword 2 \sep Keyword 3
 
 
 \bibliographystyle{elsarticle-num}
-\bibliography{biblio}
+\bibliography{../biblio}
 
 \end{document}
 
