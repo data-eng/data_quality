@@ -1,0 +1,405 @@
+\subsection{Theoretical Background: Hyperplane-Assisted Softmax}
+\label{sec:has_background}
+
+\subsubsection{Motivation and Key Insight}
+
+HASeparator \cite{kansizoglou-santavas-etal:2020} was introduced as an
+alternative to centre-based angular loss functions such as ArcFace
+\cite{deng-jiankang-etal:2019}. Unlike methods that implicitly treat the last-layer
+weight vector of each class as that class's prototype centre, HASeparator
+explicitly operates on the separation hyperplanes between pairs
+of classes.
+The separation hyperplane between class $i$ and class $j$ is uniquely
+defined by the characteristic vector
+$\bar{\bw}_{ij} = \bar{\bw}_i - \bar{\bw}_j$
+\cite{kansizoglou-bampis-gasteratos:2022}, making its computation exact and
+free of the approximation error inherent in centre-based methods.
+The method adapts the maximum-margin principle of Support Vector
+Machines~(SVM) \cite{cortes-vapnik:1995} to the continuously evolving
+embedding space of a CNN, where both feature vectors and decision
+boundaries are jointly optimised.
+
+\subsubsection{Forward Pass and Logit Computation}
+
+Let $\bE \in \Rn^{B \times N}$ denote a batch of feature embeddings,
+$\bW \in \Rn^{N \times C}$ the classification layer weights,
+$B$ the batch size, $N = 64$ the embedding dimension, and
+$C$ the number of classes.
+Both embeddings and weights are $\ell_2$-normalised, yielding
+$\hat{\bE}$ and $\hat{\bW}$, so that their matrix product corresponds
+to cosine similarities.
+The scaled logits are
+\begin{equation}
+  O^i_j \;=\; \sigma\,\hat{E}^i_k\,\hat{W}^k_j \,,
+  \label{eq:logits}
+\end{equation}
+where $\sigma > 0$ is a learnable feature scaler that defines the
+radius of the embedding hypersphere, and index notation follows the
+Einstein summation convention \cite{kansizoglou-santavas-etal:2020}.
+
+\subsubsection{HASeparator Penalty}
+
+For each sample $i$ with ground-truth label $\ell_i$, the
+$C$ separation hyperplanes of the target class are formed by
+broadcasting the target weight vector $\hat{\bw}_{\ell_i}$
+across all class weight vectors:
+\begin{equation}
+  \bH \;=\; \hat{\bW}^{+} - \bT^{+} \;\in\; \Rn^{B \times N \times C} \,,
+  \label{eq:hyperplanes}
+\end{equation}
+where $\hat{\bW}^{+}$ is $\hat{\bW}$ replicated $B$ times and
+$\bT^{+}$ holds $\hat{\bw}_{\ell_i}$ replicated across the $C$
+class axis.
+After $\ell_2$-normalizing $\bH$ along the neuron axis to obtain
+$\hat{\bH}$, the projection of each embedding onto the $C$
+hyperplane normals is
+\begin{equation}
+  P^i_j \;=\; \hat{E}^{\cdot i}_k\,\hat{H}^{\cdot i k}_j \,,
+  \label{eq:projections}
+\end{equation}
+producing cosine values bounded in $[-1,1]$.
+A relaxed SVM cost is then applied element-wise:
+\begin{equation}
+  J(p^i_j) \;=\; m - \min(p^i_j,\, m)\,, \quad m \in (0,1]\,,
+  \label{eq:cost}
+\end{equation}
+and the total batch penalty is
+\begin{equation}
+  C_t \;=\; \frac{1}{B}\,\bm{1}_i\,J^i_j\,\bm{1}^j \,.
+  \label{eq:ct}
+\end{equation}
+Summing over all $C$ hyperplanes of the target class penalises embeddings
+that lie close to \emph{any} decision boundary, directly maximising the
+minimum angular distance to the nearest hyperplane.
+
+\subsubsection{Training Objective and Warmup Schedule}
+
+The final objective combines $C_t$ with the negative log-likelihood loss:
+\begin{equation}
+  \mathcal{L} \;=\; \alpha\,C_{\mathrm{NLL}} \;+\; \beta_{\mathrm{eff}}(t)\,C_t \,,
+  \label{eq:total_loss}
+\end{equation}
+where $\alpha$ and $\beta$ are weighting coefficients.
+To prevent the angular penalty from destabilising the embedding geometry
+in early training, $\beta$ is linearly warmed up from zero:
+\begin{equation}
+  \beta_{\mathrm{eff}}(t) \;=\; \beta \cdot \min\!\left(\frac{t}{T_w},\,1\right)\,,
+  \label{eq:warmup}
+\end{equation}
+with $T_w = 5$ warm-up epochs.
+Convergence health is monitored through the mean pairwise cosine
+similarity of the $\ell_2$-normalised class weight vectors,
+$\bar{w}_{\cos}$; values in $[0.10,\,0.25]$ indicate well-separated
+prototypes, while values approaching unity signal geometric collapse.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection{Datasets}
+\label{sec:datasets}
+
+
+
+
+
+
+The experimental evaluation draws on two publicly available datasets
+that differ systematically in acquisition conditions, image style,
+and intended use, making them well-suited for studying natural
+distribution shift.
+ 
+
+
+\subsubsection{Source Dataset: Landscape Recognition (12K)}
+\label{sec:source_dataset}
+ 
+The Landscape Recognition Image Dataset~\cite{utkarsh} is a curated benchmark for five-class
+landscape image classification, comprising approximately $12{,}000$
+RGB images organised into five semantic categories:
+\texttt{Coast}, \texttt{Desert}, \texttt{Forest},
+\texttt{Glacier}, and \texttt{Mountain}.
+The dataset provides a predefined training split
+and a held-out test split with no subject overlap.
+All images are resized to $224 \times 224$ pixels and normalised
+with ImageNet channel statistics
+(mean $[0.485, 0.456, 0.406]$, std $[0.229, 0.224, 0.225]$).
+Both models are trained and evaluated exclusively on this dataset.
+
+
+
+\subsubsection{Target Dataset: ARXPHOTO314}
+\label{sec:target_dataset}
+ 
+The ARXPHOTO314 dataset \cite{arxnetsa:2025} is a
+large-scale collection of $18{,}320$ real-world photographs
+representative of images found on users' mobile devices, organised
+into 40 top-level categories and 314 fine-grained concept classes.
+For this study, five top-level landscape categories of ARXPHOTO314
+are selected and mapped one-to-one to the five Landscape Recognition
+classes, as detailed in Table~\ref{tab:classmap}.
+All remaining categories (e.g.\ People, Food, Art, Architecture)
+are excluded.
+The five selected categories are further organised into fine-grained
+sub-categories (e.g.\ distinct types of beach, mountain, or desert
+environments), which are exploited in the hierarchical drift
+analysis of Section~\ref{.....}.
+ 
+\begin{table}[htbp]
+\centering
+\caption{Class mapping between ARXPHOTO314 (target) and
+         Landscape Recognition (source).
+         Label indices correspond to the training class ordering.}
+\label{tab:classmap}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{} l c l @{}}
+\toprule
+\textbf{ARXPHOTO314 folder} & \textbf{Label} & \textbf{Source class} \\
+\midrule
+Beach Landscape       & 0 & Coast    \\
+Desert Landscape      & 1 & Desert   \\
+Forest Landscape      & 2 & Forest   \\
+Ice \& Snow Landscape & 3 & Glacier  \\
+Mountain Landscape    & 4 & Mountain \\
+\bottomrule
+\end{tabular}
+\end{table}
+ 
+The ARXPHOTO314 dataset constitutes a natural domain shift relative to the Landscape Recognition benchmark, primarily because the source dataset consists of semantically curated, web-scraped images that often reflect idealized photographic conditions. 
+In contrast, ARXPHOTO314 contains unconstrained, real-world mobile photographs captured under highly variable lighting, framing, scale, and environmental conditions, without any curation constraints beyond the broad category label.
+This stark contrast provides a rigorous framework for analyzing both data drift, represented as a distributional divergence in the latent embedding space, and concept drift, manifested through reduced prediction confidence and a narrowing of the angular margin to decision boundaries. Consequently, the integration of these two datasets creates an authentic, valid, and reproducible testbed for evaluating the robustness of the proposed detection methodology against real-world distribution shifts.
+
+
+
+
+
+\subsection{Model Architectures and Training}
+\label{sec:training}
+
+Both models utilize a ResNet-50~\cite{he-zhang-etal:2016} as a common backbone trained from scratch, followed by a bottleneck module (\texttt{Embedder64}) that maps the
+2048-dimensional global average-pooled feature to a
+64-dimensional latent space via BatchNorm $\to$ Dropout$(0.3)$
+$\to$ Linear$(2048, 64)$ $\to$ BatchNorm.
+This 64-dimensional bottleneck mirrors the ResNet-50 variant
+of the original HASeparator paper \cite{kansizoglou-santavas-etal:2020}
+and provides a shared, comparable latent space for drift analysis
+across both models.
+
+\subsubsection{Baseline Model}
+
+The baseline appends a linear classification head
+$\mathrm{Linear}(64, C)$ to the bottleneck and trains with
+categorical cross-entropy.
+No angular or norm constraints are imposed on the embeddings.
+Training uses Stochastic Gradient Descent (SGD) with
+momentum $\gamma = 0.9$, and
+weight decay $\lambda = 10^{-4}$, with initial learning rate
+$\eta_0 = 0.1$ decaying by a factor of $10$ at epochs
+$\lfloor 0.6 \cdot T \rfloor$ and $\lfloor 0.8 \cdot T \rfloor$
+(multi-step schedule, $T = 150$ epochs).
+
+\subsubsection{HAS Model}
+
+The HAS model replaces the linear head with a
+\texttt{HASeparatorMultiClass} layer, which maintains an
+$N \times C$ weight matrix on the unit sphere and computes the
+composite loss~(\ref{eq:total_loss}).
+Training employs SGD with the same momentum, weight decay, and
+multi-step schedule as the baseline, but with a lower
+initial learning rate $\eta_0 = 0.05$ to prevent early
+geometric collapse under the angular penalty.
+Hyperparameters are set to $\alpha = 1.0$, $\beta = 0.5$,
+$m = 0.3$, and $\sigma = 8.0$, following empirical calibration
+on the five-class landscape task.
+The best-checkpoint strategy and batch size of $64$ are
+identical to the baseline.
+
+Training augmentation for both models consists of random
+resized cropping to $224 \times 224$, random horizontal flipping,
+and colour jitter (brightness and contrast $\pm 0.2$).
+All evaluation and feature extraction are performed with a
+deterministic standard transform (resize to $224\times224$,
+ImageNet normalisation), ensuring that extracted embeddings are
+unaffected by stochastic augmentation.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection{Feature Extraction and Geometric Signal Computation}
+\label{sec:extraction}
+
+Following training, both models are frozen and used in inference
+mode to extract 64-dimensional embeddings for every sample in
+the training set and the custom evaluation set.
+For the HAS model, the embedding $\hat{\be}_i \in \Sn^{63}$ is
+the $\ell_2$-normalised bottleneck output, placing all HAS
+representations on the unit 63-sphere by construction.
+Baseline embeddings $\be_i \in \Rn^{64}$ carry no such constraint.
+
+\subsubsection{Baseline Reference Distribution}
+
+For the baseline, two statistics are computed over the training
+embeddings and stored as the reference distribution.
+The global centroid $\bm{c} = \frac{1}{n}\sum_i \be_i$
+and the associated Euclidean distance
+$d_i = \|\be_i - \bm{c}\|_2$
+characterise the spatial spread of the training latent space.
+Prediction confidence $q_i = \max_j\, p_{ij}$, where
+$p_{ij}$ is the softmax probability of class $j$, captures
+output certainty.
+The per-split mean and standard deviation of both $d$ and $q$
+serve as calibration statistics for thresholding at test time.
+
+
+
+
+\subsubsection{HAS-Specific Drift Signals}
+
+
+The spherical geometry of HAS embeddings enables three additional
+drift-sensitive signals that are not presented in the baseline setting due to its geometrical limitations. These signals arise directly from the hyperspherical structure that the
+HASeparator penalty imposes during training. 
+By explicitly pushing embeddings away from class separation hyperplanes, the trained
+model encodes proximity to decision boundaries as a measurable
+geometric quantity that can be monitored at inference time.
+Crucially, these signals are entirely independent of the
+HASeparator training hyperparameters ($m$ and $\sigma$), which
+govern the geometry during learning.
+Thus the drift signals are computed post-hoc from the frozen model's outputs alone.
+
+
+
+\paragraph{Angular Margin}
+
+Let $\hat{y}_i$ and $\hat{y}_i^{(2)}$ denote the predicted
+(highest-scoring) and second-best (runner-up) class for sample
+$i$, respectively, where the runner-up class is the one whose
+weight vector $\hat{\bw}_{\hat{y}_i^{(2)}}$ has the second-highest
+cosine similarity with the embedding \textit {i.e.}, the class the model
+was most tempted to predict instead of $\hat{y}_i$.
+The angular margin is defined as the difference between these two
+cosine similarities:
+\begin{equation}
+  \Delta_i \;=\;
+    \bigl(\hat{\be}_i \cdot \hat{\bw}_{\hat{y}_i}\bigr) -
+    \bigl(\hat{\be}_i \cdot \hat{\bw}_{\hat{y}_i^{(2)}}\bigr)\,,
+  \label{eq:margin}
+\end{equation}
+and corresponds to the angular gap between the embedding and the
+nearest class separation hyperplane on $\mathcal{S}^{63}$.
+A large $\Delta_i$ indicates that the embedding lies deep within
+the predicted class region, comfortably distant from any decision
+boundary.
+A small positive $\Delta_i$ signals that the embedding is close to the boundary between the predicted and runner-up class, and therefore geometrically fragile under distribution
+shift.
+Moreover, $\Delta_i \approx 0$ means the embedding sits almost
+exactly on the separation hyperplane, whilea negative $\Delta_i$
+indicates that the embedding has crossed the boundary, ~\textit{ i.e.}, the
+runner-up class is actually more aligned with the embedding than
+the predicted class, which is a strong indicator of
+misclassification.
+
+Since the HASeparator penalty during training explicitly maximises
+this margin for all training samples, the training distribution
+$\{\Delta_i^{\mathrm{train}}\}$ provides a natural reference for
+what constitutes a geometrically safe embedding.
+A custom-set sample is flagged as concept-drifted when its margin falls below:
+\begin{equation}
+  \tau_\Delta \;=\; \max\!\bigl(\mu_\Delta - k\,\sigma_\Delta,\ 0\bigr),
+  \label{eq:margin_thresh}
+\end{equation}
+where $\mu_\Delta$ and $\sigma_\Delta$ are the mean and standard
+deviation of the training margin distribution, and $k = 2.0$
+is a sensitivity hyperparameter (\texttt{HAS\_MARGIN\_SIGMA}
+in the implementation). A custom sample falling below
+$\tau_\Delta$ is therefore one whose embedding is more
+boundary-proximate than approximately $97.7\%$ of training
+samples, constituting a statistically motivated criterion for
+geometric concept drift.
+
+
+
+\paragraph{Cosine Distance from the Per-Class Sphere Centroid.}
+
+While the angular margin captures proximity to decision boundaries,
+a complementary signal is needed to detect shifts in the input
+representation itself ~\textit{i.e.} data-drift.
+For this purpose, the cosine distance from the
+predicted-class sphere centroid $\bm{\mu}_{\hat{y}_i}$ is used
+as the data drift indicator. For a test sample $i$ predicted as
+class $\hat{y}_i$, this is defined as:
+\begin{equation}
+  d_{\mu}(i) \;=\; 1 - \hat{\be}_i \cdot \bm{\mu}_{\hat{y}_i}\,,
+  \label{eq:cos_dist}
+\end{equation}
+where $\bm{\mu}_{\hat{y}_i}$ is the per-class sphere centroid
+computed from all training embeddings of class $\hat{y}_i$.
+A low $d_\mu(i)$ indicates that the embedding is tightly
+clustered with the training samples of its predicted class on
+$\mathcal{S}^{63}$.
+Additionally, a high value indicates that the embedding
+has drifted away from where training samples of that class
+typically reside, even if the model still predicts that class
+with high confidence.
+
+This method has two properties that make it particularly suited
+to the HAS geometry. First, it is class-conditional.
+Thus the reference centroid $\bm{\mu}_{\hat{y}_i}$ depends on the
+predicted class, so the threshold adapts to the natural spread
+of each class on the hypersphere rather than applying a single
+global criterion. Second, it is scale-free, because both
+the embedding and the centroid are unit vectors, the cosine
+distance is bounded in $[0, 2]$ and is not affected by the
+feature scaler $\sigma$ used during training. This contrasts
+with the Euclidean distance used by the baseline, which is
+sensitive to the overall scale of the embedding space and
+applies a single global centroid regardless of class.
+
+Note that both thresholds follow the same $k\sigma$ criterion applied to
+the training distribution of each instance, but in opposite
+directions. 
+Thus, data drift is detected when $d_\mu(i)$ exceeds the
+upper tail of its training distribution, indicating the embedding
+has moved away from its class centroid, while concept drift is
+detected when $\Delta_i$ falls below the lower tail, indicating
+the embedding has moved \emph{toward} a decision boundary.
+
+Combining the two HAS-specific indicators yields a refined four-category taxonomy
+that is both class-conditional and geometrically grounded:
+\emph{In-Distribution}, when neither indicator is triggered,
+\emph{Pure Data Drift}, when the embedding has departed from
+the training class manifold but the model remains geometrically
+confident, \emph{Pure Concept Drift}, when the embedding sits
+close to its class centroid but near a decision boundary,
+suggesting the model's learned boundaries no longer align with
+the data, and lastly \emph{Full Drift}, when both indicators fire
+simultaneously, indicating a compound shift in both the
+input representation and the decision boundary alignment.
+In contrast to the confidence-based baseline taxonomy, the HAS
+taxonomy exploits the geometric structure of the hypersphere
+to disentangle the two drift types, enabling targeted
+adaptation strategies for each category independently.
+
