@@ -104,9 +104,33 @@ objects, it is unlikely that a noticeable drift can occur.
 
 \section{Method}
 
+train
+%
+\begin{itemize}
+\item classifier, original space
+\item HASeparator, embedding
+\item extract: some statistics about the HAS space
+\end{itemize}
+
+deploy
+
+test:
+%
+\begin{itemize}
+\item for each instance x class, calculate a valuation based on extract
+\item if two classes are near, this is a candidate for represent drift
+\item assign a label
+\item fine tuning
+\end{itemize}
+
 
 
 \section{Experiments and Results}
+
+
+by comparison to baseline (original embedding): overlap, accuracy
+
+by comparison to labelling everything: accuracy
 
 
 
