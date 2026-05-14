@@ -1,0 +1,77 @@
+
+The experimental evaluation draws on two publicly available datasets
+that differ systematically in acquisition conditions, image style,
+and intended use, making them well-suited for studying natural
+distribution shift.
+
+
+\subsubsection{Source Dataset: Landscape Recognition (12K)}
+\label{sec:source_dataset}
+ 
+The Landscape Recognition Image Dataset~\cite{utkarsh} is a curated benchmark for five-class
+landscape image classification, comprising approximately $12{,}000$
+RGB images organised into five semantic categories:
+\texttt{Coast}, \texttt{Desert}, \texttt{Forest},
+\texttt{Glacier}, and \texttt{Mountain}.
+The dataset provides a predefined training split
+and a held-out test split with no subject overlap.
+All images are resized to $224 \times 224$ pixels and normalised
+with ImageNet channel statistics
+(mean $[0.485, 0.456, 0.406]$, std $[0.229, 0.224, 0.225]$).
+Both models are trained and evaluated exclusively on this dataset.
+
+
+
+\subsubsection{Target Dataset: ARXPHOTO314}
+\label{sec:target_dataset}
+ 
+The ARXPHOTO314 dataset \cite{arxnetsa:2025} is a
+large-scale collection of $18{,}320$ real-world photographs
+representative of images found on users' mobile devices, organised
+into 40 top-level categories and 314 fine-grained concept classes.
+For this study, five top-level landscape categories of ARXPHOTO314
+are selected and mapped one-to-one to the five Landscape Recognition
+classes, as detailed in Table~\ref{tab:classmap}.
+All remaining categories (e.g.\ People, Food, Art, Architecture)
+are excluded.
+The five selected categories are further organised into fine-grained
+sub-categories (e.g.\ distinct types of beach, mountain, or desert
+environments), which are exploited in the hierarchical drift
+analysis of Section~\ref{.....}.
+ 
+\begin{table}[htbp]
+\centering
+\caption{Class mapping between ARXPHOTO314 (target) and
+         Landscape Recognition (source).
+         Label indices correspond to the training class ordering.}
+\label{tab:classmap}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{} l c l @{}}
+\toprule
+\textbf{ARXPHOTO314 folder} & \textbf{Label} & \textbf{Source class} \\
+\midrule
+Beach Landscape       & 0 & Coast    \\
+Desert Landscape      & 1 & Desert   \\
+Forest Landscape      & 2 & Forest   \\
+Ice \& Snow Landscape & 3 & Glacier  \\
+Mountain Landscape    & 4 & Mountain \\
+\bottomrule
+\end{tabular}
+\end{table}
+ 
+The ARXPHOTO314 dataset constitutes a natural domain shift relative to
+the Landscape Recognition benchmark, primarily because the source
+dataset consists of semantically curated, web-scraped images that
+often reflect idealized photographic conditions.
+In contrast, ARXPHOTO314 contains unconstrained, real-world mobile
+photographs captured under highly variable lighting, framing, scale,
+and environmental conditions, without any curation constraints beyond
+the broad category label.
+This stark contrast provides a rigorous framework for analyzing both
+data drift, represented as a distributional divergence in the latent
+embedding space, and concept drift, manifested through reduced
+prediction confidence and a narrowing of the angular margin to
+decision boundaries. Consequently, the integration of these two
+datasets creates an authentic, valid, and reproducible testbed for
+evaluating the robustness of the proposed detection methodology
+against real-world distribution shifts.

@@ -1,0 +1,105 @@
+
+\subsection{Drift detection}
+\label{sec:bg:drift}
+
+Data drift.
+
+
+
+\subsection{Hyperplane-Assisted Softmax}
+\label{sec:bg:has}
+
+
+\subsubsection{Motivation and Key Insight}
+
+HASeparator \cite{kansizoglou-santavas-etal:2020} was introduced as an
+alternative to centre-based angular loss functions such as ArcFace
+\cite{deng-jiankang-etal:2019}. Unlike methods that implicitly treat the last-layer
+weight vector of each class as that class's prototype centre, HASeparator
+explicitly operates on the separation hyperplanes between pairs
+of classes.
+The separation hyperplane between class $i$ and class $j$ is uniquely
+defined by the characteristic vector
+$\bar{\bw}_{ij} = \bar{\bw}_i - \bar{\bw}_j$
+\cite{kansizoglou-bampis-gasteratos:2022}, making its computation exact and
+free of the approximation error inherent in centre-based methods.
+The method adapts the maximum-margin principle of Support Vector
+Machines~(SVM) \cite{cortes-vapnik:1995} to the continuously evolving
+embedding space of a CNN, where both feature vectors and decision
+boundaries are jointly optimised.
+
+\subsubsection{Forward Pass and Logit Computation}
+
+Let $\bE \in \Rn^{B \times N}$ denote a batch of feature embeddings,
+$\bW \in \Rn^{N \times C}$ the classification layer weights,
+$B$ the batch size, $N = 64$ the embedding dimension, and
+$C$ the number of classes.
+Both embeddings and weights are $\ell_2$-normalised, yielding
+$\hat{\bE}$ and $\hat{\bW}$, so that their matrix product corresponds
+to cosine similarities.
+The scaled logits are
+\begin{equation}
+  O^i_j \;=\; \sigma\,\hat{E}^i_k\,\hat{W}^k_j \,,
+  \label{eq:logits}
+\end{equation}
+where $\sigma > 0$ is a learnable feature scaler that defines the
+radius of the embedding hypersphere, and index notation follows the
+Einstein summation convention \cite{kansizoglou-santavas-etal:2020}.
+
+\subsubsection{HASeparator Penalty}
+
+For each sample $i$ with ground-truth label $\ell_i$, the
+$C$ separation hyperplanes of the target class are formed by
+broadcasting the target weight vector $\hat{\bw}_{\ell_i}$
+across all class weight vectors:
+\begin{equation}
+  \bH \;=\; \hat{\bW}^{+} - \bT^{+} \;\in\; \Rn^{B \times N \times C} \,,
+  \label{eq:hyperplanes}
+\end{equation}
+where $\hat{\bW}^{+}$ is $\hat{\bW}$ replicated $B$ times and
+$\bT^{+}$ holds $\hat{\bw}_{\ell_i}$ replicated across the $C$
+class axis.
+After $\ell_2$-normalizing $\bH$ along the neuron axis to obtain
+$\hat{\bH}$, the projection of each embedding onto the $C$
+hyperplane normals is
+\begin{equation}
+  P^i_j \;=\; \hat{E}^{\cdot i}_k\,\hat{H}^{\cdot i k}_j \,,
+  \label{eq:projections}
+\end{equation}
+producing cosine values bounded in $[-1,1]$.
+A relaxed SVM cost is then applied element-wise:
+\begin{equation}
+  J(p^i_j) \;=\; m - \min(p^i_j,\, m)\,, \quad m \in (0,1]\,,
+  \label{eq:cost}
+\end{equation}
+and the total batch penalty is
+\begin{equation}
+  C_t \;=\; \frac{1}{B}\,\bm{1}_i\,J^i_j\,\bm{1}^j \,.
+  \label{eq:ct}
+\end{equation}
+Summing over all $C$ hyperplanes of the target class penalises embeddings
+that lie close to \emph{any} decision boundary, directly maximising the
+minimum angular distance to the nearest hyperplane.
+
+\subsubsection{Training Objective and Warmup Schedule}
+
+The final objective combines $C_t$ with the negative log-likelihood loss:
+\begin{equation}
+  \mathcal{L} \;=\; \alpha\,C_{\mathrm{NLL}} \;+\; \beta_{\mathrm{eff}}(t)\,C_t \,,
+  \label{eq:total_loss}
+\end{equation}
+where $\alpha$ and $\beta$ are weighting coefficients.
+To prevent the angular penalty from destabilising the embedding geometry
+in early training, $\beta$ is linearly warmed up from zero:
+\begin{equation}
+  \beta_{\mathrm{eff}}(t) \;=\; \beta \cdot \min\!\left(\frac{t}{T_w},\,1\right)\,,
+  \label{eq:warmup}
+\end{equation}
+with $T_w = 5$ warm-up epochs.
+Convergence health is monitored through the mean pairwise cosine
+similarity of the $\ell_2$-normalised class weight vectors,
+$\bar{w}_{\cos}$; values in $[0.10,\,0.25]$ indicate well-separated
+prototypes, while values approaching unity signal geometric collapse.
+
+
+
