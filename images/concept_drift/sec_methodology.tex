@@ -1,4 +1,78 @@
 
+As discussed in the Introduction, our work targets an active learning
+setup where the system is trained and deployed and where, during
+deployment, the system may request to have a limited number of new
+instances manually annotated for the purpose of fine-tuning and
+adapting.
+
+We will establish the following nomenclature, reflecting how we mapped
+the general deployment scenario above into a concrete ML experiment:
+%
+\begin{itemize}
+\item The \term{training set} and the \term{validation set}
+  constitute the train/test split of the original data.
+  The training set is used to train a classifier and the
+  validation set is used to estimate model accuracy and HAS scale.
+  This step reflects model preparation before deployment.
+\item The \term{fine-tuning set} and the \term{test set} constitute
+  the train/test split of a second dataset. There is an
+  \quoted{annotation budget} for labelling some of the instances of
+  the fine-tuning set, the \term{labelled fine-tuning set}.
+  The test set is fully labelled.
+  The success of the selection is estimated by measuring accuracy on
+  the test set: In the presence of drift, we expect the accuracy of
+  the original model to drop and this drop to be, at least partially,
+  recovered by the fine tuned model.
+  This step reflects model adaptation after deployment.
+\end{itemize}
+
+Since we have scoped our work as addressing gradual drift in the
+meaning of existing labels (as opposed to novelty and to abrupt
+drift), we will assume that the labelled fine-tuning set should
+include the instances that are further away from the semantic core of
+our labels, since the instances at the periphery are the ones that
+establish the decision boundaries.
+
+In this context we formulate the following hypotheses:
+%
+\begin{itemize}
+\item[\textbf{H1}] We will use HAS space and HAS scale to define a
+  distribution curve upon which we can place instances to measure how
+  central or peripheral they are. This is analogous to how data drift
+  is estimated, but we hypothesise that: The instances that are at the
+  edges of the the HAS curve more likely to be misclassified even when
+  they are \emph{not} at the edges of the data drift curve.
+\end{itemize}
+%
+We consider that such instances reflect concept drift and that, if the
+hypothesis is correct, they are necessary for accurate fine tuning.
+So we further hypothesise that:
+%
+\begin{itemize}
+\item[\textbf{H2}] If we use the HAS space and HAS scale to find the
+  peripheral instances, we get a better selection than what we get in
+  the original space.
+\end{itemize}
+
+%
+\begin{itemize}
+\item classifier, original space
+\item HASeparator, embedding
+\item extract: some statistics about the HAS space
+\end{itemize}
+
+deploy
+
+test:
+%
+\begin{itemize}
+\item for each instance x class, calculate a valuation based on extract
+\item if two classes are near, this is a candidate for represent drift
+\item assign a label
+\item fine tuning
+\end{itemize}
+
+
 
 \subsection{Model Architectures and Training}
 \label{sec:training}
