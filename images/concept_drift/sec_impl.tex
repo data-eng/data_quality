@@ -1,0 +1,63 @@
+
+
+
+
+\subsection{Model Architectures and Training}
+\label{sec:training}
+
+Both models utilize a ResNet-50~\cite{he-zhang-etal:2016} as a common backbone trained from scratch, followed by a bottleneck module (\texttt{Embedder64}) that maps the
+2048-dimensional global average-pooled feature to a
+64-dimensional latent space via BatchNorm $\to$ Dropout$(0.3)$
+$\to$ Linear$(2048, 64)$ $\to$ BatchNorm.
+This 64-dimensional bottleneck mirrors the ResNet-50 variant
+of the original HASeparator paper \cite{kansizoglou-santavas-etal:2020}
+and provides a shared, comparable latent space for drift analysis
+across both models.
+
+\subsubsection{Baseline Model}
+
+The baseline appends a linear classification head
+$\mathrm{Linear}(64, C)$ to the bottleneck and trains with
+categorical cross-entropy.
+No angular or norm constraints are imposed on the embeddings.
+Training uses Stochastic Gradient Descent (SGD) with
+momentum $\gamma = 0.9$, and
+weight decay $\lambda = 10^{-4}$, with initial learning rate
+$\eta_0 = 0.1$ decaying by a factor of $10$ at epochs
+$\lfloor 0.6 \cdot T \rfloor$ and $\lfloor 0.8 \cdot T \rfloor$
+(multi-step schedule, $T = 150$ epochs).
+
+\subsubsection{HAS Model}
+
+The HAS model replaces the linear head with a
+\texttt{HASeparatorMultiClass} layer, which maintains an
+$N \times C$ weight matrix on the unit sphere and computes the
+composite loss~(\ref{eq:total_loss}).
+Training employs SGD with the same momentum, weight decay, and
+multi-step schedule as the baseline, but with a lower
+initial learning rate $\eta_0 = 0.05$ to prevent early
+geometric collapse under the angular penalty.
+Hyperparameters are set to $\alpha = 1.0$, $\beta = 0.5$,
+$m = 0.3$, and $\sigma = 8.0$, following empirical calibration
+on the five-class landscape task.
+The best-checkpoint strategy and batch size of $64$ are
+identical to the baseline.
+
+Training augmentation for both models consists of random
+resized cropping to $224 \times 224$, random horizontal flipping,
+and colour jitter (brightness and contrast $\pm 0.2$).
+All evaluation and feature extraction are performed with a
+deterministic standard transform (resize to $224\times224$,
+ImageNet normalisation), ensuring that extracted embeddings are
+unaffected by stochastic augmentation.
+
+
+\subsection{Implementation Details}
+
+Following training, both models are frozen and used in inference
+mode to extract 64-dimensional embeddings for every sample in
+the training set and the custom evaluation set as described in Section~\ref{sec:extraction}.
+For the HAS model, the embedding $\hat{\be}_i \in \Sn^{63}$ is
+the $\ell_2$-normalised bottleneck output, placing all HAS
+representations on the unit 63-sphere by construction.
+Baseline embeddings $\be_i \in \Rn^{64}$ carry no such constraint.
