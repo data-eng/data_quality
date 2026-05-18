@@ -87,8 +87,42 @@ Concept drift \sep Active Learning \sep Representation Learning
 \section{Introduction}
 \label{sec:intro}
 
-For a machine learning system deployed in dynamic environment,
-continuous monitoring and adaptation is a necessity to mitigate
+For a \term{machine learning (ML)} system deployed in a dynamic
+environment, continuous monitoring and adaptation is a challenging
+necessity in order to maintain its performance. Since, in its most
+abstract formulation, an ML model is the conditional distribution
+$P(Y|X)$ that represents the relationship between inputs $X$ and
+outputs $Y$, a failure to maintain the performance observed during
+development-time testing can mean that either the distribution of the
+input features has changed or that the relationship between inputs and
+outputs has changed. In this work, we will follow most, although not
+all, of the relevant literature and call the former \emph{data drift}
+and the latter \emph{concept drift}.
+
+
+
+
+
+Concept drift, first introduced by Schlimmer and Granger (1986), refers to changes in the
+conditional distribution P (y|x), where the relationship between input features x and target
+labels y evolves over time in non-stationary environments. In the other hand, data drift (also
+known as covariate shift) denotes changes in the input features distribution P (x) (Acker-
+man et al. 2020).
+
+\cite{hira-et::2025}
+
+
+
+\cite{bhargava-singhal:2024}
+
+attracts
+the attention of both academia and practitioners.
+
+
+
+
+
+to mitigate
 performance degradation.
 
 As expected, this is a well-studied problem
