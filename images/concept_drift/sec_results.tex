@@ -1,6 +1,175 @@
+In this section we present the results that validate our hypothesis described in Section~\ref{}.
+Thus, Section~\ref{sec:drift_analysis} presentes the drift detection results as well as the identification of the drift type results for the baseline compared to the HAS method.
+Section~\ref{sec:res_direction} presented the results of the drift directions, namely the asnwer to the \emph{toward which class} question we set at the methodology section.
+Lastly, Section~\ref{sec:res_finetune} confirm the Hypothesis formed in Section~\ref{}.
+
+
+\subsection{Drift Analysis} 
+\label{sec:drift_analysis}
+
+Towards that, Table~\ref{tab:pop_tests} presents the statistical results of the six
+population-level statistical tests described in
+Section~\ref{}. 
+The MMD-RBF test assesses whether the latent space distributions of the two sets are 
+statistically distinguisable.
+Moreover, the $p$-value indicates the statistical significance of that difference.
+Small $p$-value indicate that the two datasets represent different distributions.
+Both models detect data-level shift via MMD-RBF, with
+comparable statistics ($0.0175$ for the baseline,
+$0.0146$ for HAS), confirming that the latent distributions
+of the two datasets are non-identical.
+
+Additionally, to assess whether this shift is related ot the model's output behaviour, the KS test is applied.
+Both models show highly signigicant confidence drops, but a notably different magnitude.
+The larger KS statistic for HAS reflects the methodologies discriminative characteristics.
+Thus, because HAS predictions are more concentrated and peaked on the training data, the confidence drop under distribution shift.
+
+However, confidence alone cannot distinguish \emph{why} the model has become uncertain, as uncertain can arise from diferrent types of drift. 
+This is the core limitation of the confidence-based drift detection, what motivated the two additional HAS test.
+
+The two HAS-exclusive metrics \textit{i.e.,} KS HAS margin and $\chi^2$ (boundary dir.), provide the \emph{why} answer that the baseline cannot access. The KS test on angular margins
+yields a statistic of $0.392$ ($p \approx 1.36 \times
+10^{-243}$), confirming that fine-tuning set embeddings
+lie significantly closer to decision boundaries than
+training embeddings.
+A geometric signature of concept drift invisible to confidence-only methods. 
+Lastly, the $\chi^2$ boundary direction test (statistic $= 82.54$,
+$p \approx 5.05 \times 10^{-17}$) further confirms that drift is not uniformly distributed across class boundaries but is systematically concentrated toward specific class
+pairs, motivating the directional analysis described in Section~\ref{sec:closest_boundary}.
 
 
 
-Table showing results of the drift-detection and drift-direction detection.
-Table showing the results for training on subsets (accuracy).
-Table of drift predication examples .
+\begin{table}[htbp]
+\centering
+\caption{Population-level drift test results. All tests are significant at $p < 0.01$.}
+\label{tab:pop_tests}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{} l l r r c @{}}
+\toprule
+\textbf{Test} & \textbf{Model} & \textbf{Statistic} & \textbf{$p$-value} & \textbf{Drifted} \\
+\midrule
+MMD (RBF)               & Baseline & 0.0175 & $3.32 \times 10^{-3}$  & \checkmark \\
+MMD (RBF)               & HAS      & 0.0146 & $3.32 \times 10^{-3}$  & \checkmark \\
+KS (confidence)         & Baseline & 0.325  & $1.96 \times 10^{-166}$ & \checkmark \\
+KS (confidence)         & HAS      & 0.403  & $6.56 \times 10^{-258}$ & \checkmark \\
+KS (HAS margin)         & HAS      & 0.392  & $1.36 \times 10^{-243}$ & \checkmark \\
+$\chi^2$ (boundary dir.)& HAS      & 82.54  & $5.05 \times 10^{-17}$  & \checkmark \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+Having established the drift identification, next step is understanding the type of drift 
+that occurs. Table~\ref{tab:taxonomy} compares the percentage of
+fine-tuning samples assigned to each drift category under the baseline confidence-based
+taxonomy, the HAS confidence-based taxonomy, and the
+proposed HAS margin-based taxonomy.
+
+\begin{table}[htbp]
+\centering
+\caption{Drift taxonomy comparison. Percentages indicate the fraction of fine-tuning samples assigned to each category under three detection schemes.}
+\label{tab:taxonomy}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{} l r r r @{}}
+\toprule
+\textbf{Category} & \textbf{Baseline} &
+\textbf{HAS-conf} & \textbf{HAS-margin} \\
+\midrule
+In-Distribution    & 72.0\% & 59.8\% & 56.8\% \\
+Pure Data Drift    &  2.0\% & 13.4\% &  5.1\% \\
+Pure Concept Drift & 25.9\% &  0.1\% &  3.1\% \\
+Full Drift (both)  &  0.0\% & 26.7\% & 35.0\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+
+From Table~\ref{tab:taxonomy} we identify that the baseline classifies
+$72.0\%$ of fine-tuning samples as In-Distribution, compared to $56.8\%$ under HAS-margin.
+This indicates that the confidence-only criterion misses a substantial fraction of
+drifted samples. Second, and most critically, the baseline detects \emph{zero} instances of Full Drift, whereas HAS-margin identifies $35.0\%$ of samples as compared shift in both their embedding representation and their boundary proximity. 
+Lastly, the baseline flags $25.9\%$ of samples as Pure Concept Drift via
+low confidence, whereas HAS-margin assigns only $3.1\%$ to this category.
+Many samples that appear uncertain under softmax confidence are, geometrically, not
+boundary-proximate in HAS space, suggesting that the confidence signal produces false concept drift positives for samples that are simply data-shifted rather than
+decision-boundary-confused.
+
+Comparing HAS-conf against HAS-margin reveals the added value of the angular margin over confidence even within the same embedding space. HAS-margin assigns $35.0\%$ to
+Full Drift versus $26.7\%$ for HAS-conf, and reduces the spurious Pure Concept Drift fraction from near-zero ($0.1\%$) to a meaningful but small $3.1\%$, reflecting
+a geometrically grounded separation of the two drift types.
+
+
+\subsection{Concept Drift Direction Analysis}
+\label{sec:res_direction}
+
+
+Table~\ref{tab:direction} reports the concept drift direction matrix for HAS-margin concept-drifted samples, showing the percentage of each true class that drifts
+toward each runner-up class.
+
+\begin{table}[htbp]
+\centering
+\caption{Concept drift direction matrix (\%). Each row shows, for concept-drifted samples of a given true class, the percentage drifting toward each runner-up class. Diagonal entries indicate
+self-directed drift (correctly predicted but boundary-proximate). Dominant off-diagonal entries are in \textbf{bold}.}
+\label{tab:direction}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{} l r r r r r @{}}
+\toprule
+\textbf{True class} & \textbf{Coast} & \textbf{Desert} & \textbf{Forest} & \textbf{Glacier} & \textbf{Mountain} \\
+\midrule
+Coast   & 27.0 & \textbf{26.4} &  8.8 & 15.7 & 22.0 \\
+Desert  & \textbf{28.3} & 22.8 & 11.8 &  9.4 & 27.6 \\
+Forest  & 12.9 & 16.9 & 24.2 &  2.4 & \textbf{43.5} \\
+Glacier & 18.5 & 10.8 & 15.3 & 26.6 & \textbf{28.8} \\
+Mountain & 15.6 & \textbf{28.5} &  9.1 & 24.7 & 22.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+By observing Table~\ref{tab:direction} the most dominant drift direction is Forest toward Mountain, with $43.5\%$ of concept-drifted Forest samples exhibiting closest-boundary alignment with the Mountain class.
+Sub-categories such as \emph{Pacific Island Forest}, \emph{Olive Tree
+Cluster}, and \emph{Forest Panorama} share visual characteristics such as elevated terrain, and mixed textures, with Mountain sub-categories.
+Subsequently, the second strongest pattern is Glacier toward Mountain ($28.8\%$).
+In the category, sub-categories such as \emph{Ice Skating Rink} and \emph{Athletes on Snow
+\& Ice} lack the natural glacial landscape features that the training set Glacier class exhibits, making Mountain the geometrically nearest alternative boundary.
+
+Accordingly, a mutual pattern is observed between Coast and Desert, suggesting greater intra-class heterogeneity in the ARXPHOTO314 categories compared to the training dataset.
+
+These directional patterns are entirely inaccessible to the baseline model, which produces only a scalar confidence value and cannot identify which decision boundary is being approached.
+
+
+
+
+\subsection{Fine-Tuning Results}
+\label{sec:res_finetune}
+
+The data in Figure~\ref{fig:learning_curve} shows the classification accuracy on the test set as a function of annotation budget $N$ for both the HAS and baseline models, fine-tuned using
+their respective drift-aware selection strategies.
+
+
+\begin{figure}[ht]
+    \centering
+    \resizebox{0.8\textwidth}{!}{\input{../../results/learning_curve_study/learning_curve_study.pgf}}
+    \caption{Learning curve from concept drift study.}
+    \label{fig:learning_curve}
+\end{figure}
+
+The HAS model consistently outperforms the baseline across all tested budget levels ($N = 100$ to $N = 300$), with accuracy ranging from $58.3\%$ to $62.0\%$ for HAS and from $56.6\%$ to $61.5\%$ for the baseline.
+Consistent with our initial hypothesis, the data demonstrate that the performance advantage of HAS is largest at small budgets.
+At $N = 200$, the gap reaches $3.42$ percentage points ($61.4\%$ vs $57.9\%$), validating our hypothesis that targeted margin-based sample prioritisation is particularly valuable when annotation resources are scarce. As the budget grows toward $N = 300$, the gap narrows to $0.49$ percentage points, consistent with the expectation that at large budgets random selection eventually covers the most informative samples as well but also this further highlight that the severity drifted intances of the HAS methodology are better captured.
+
+
+This convergence behaviour is corroborated by the
+critical samples overlap column.
+At $N = 100$, only $7$ instances are shared between the HAS and baseline selections,
+confirming that the two strategies identify largely disjoint subsets at small budgets. At $N = 300$, the overlap grows to $48$ samples, reflecting the gradual convergence of the two selection sets as the budget approaches full pool coverage. Together, these results support hypothesis H2.
+Thus, prioritising samples by their angular margin in HAS space yields systematically better
+fine-tuning outcomes than random selection, with the benefit being most pronounced precisely when the annotation budget is most constrained.
+Last but not least, we can observe that the HAS's accuracy is smoothly imporved but adding more critical instances in the fine-tuning pool. One the other hand the Baselines behavior does not follow a same smooth improvement behavior with spikes in accuracy at $120, 200, 240$ instances.
+This further highlight that the severity drifted intances of the HAS methodology better captured.
+
+
+Beyond the initial observations, we also explored the nature of concept drift in the fine-tuning set, Table~\ref{tab:top50_severity} reports summary statistics for the top severity $50$ samples assigned the highest concept drift severity by the baseline model (lowest prediction confidence).
+
+
+TODO: ADD the severity table to compare baseline - has classed, true-false,
