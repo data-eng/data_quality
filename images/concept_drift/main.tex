@@ -11,12 +11,22 @@
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath, amssymb, amsfonts}
 \usepackage[hidelinks]{hyperref}
-
+\usepackage{pgf}
 \usepackage{graphicx}
+\usepackage{booktabs}
 \graphicspath{{figures}}
-
+\newcommand{\mathdefault}[1]{#1}
 \newcommand{\quoted}[1]{`#1'}
 \newcommand{\term}[1]{\emph{#1}}
+\newcommand{\bw}{\mathbf{w}}
+\newcommand{\bE}{\mathbf{E}}
+\newcommand{\bW}{\mathbf{W}}
+\newcommand{\bH}{\mathbf{H}}
+\newcommand{\bT}{\mathbf{T}}
+\newcommand{\be}{\mathbf{e}}
+\newcommand{\bm}[1]{\mathbf{#1}} % Handles \bm{1} and \bm{c}
+\newcommand{\Rn}{\mathbb{R}}
+\newcommand{\Sn}{\mathbb{S}}
 
 \def\mytitle{Amazing Results}
 \def\katerina{Katerina Oikonomou}
