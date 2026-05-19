@@ -114,6 +114,9 @@ relationship between inputs $X$ and outputs $Y$, degradation is either due to
 or \term{concept drift} (i.e., change in the relationship between inputs and outputs)
 or both.
 
+Adjusting to data drift is well-studied task, with a rich literature
+on both how to detect the drift and on how to minimize the amount of
+labelling necessary in order to re-train or fine-tune the system.
 
 
 \cite{hira-et::2025}
@@ -123,9 +126,6 @@ or both.
 \cite{bhargava-singhal:2024}
 
 
-Adjusting to data drift is well-studied task, with a rich literature
-on both how to detect the drift and on how to minimize the amount of
-labelling necessary in order to re-train or fine-tune the system.
 
 In order maximally economize on labelling effort, it makes sense to be
 able to extract as much information as possible from the
@@ -146,11 +146,12 @@ objects, it is unlikely that a noticeable drift can occur.
 \paragraph{Contributions}
 
 We present a methodology for characterizing unlabelled instances as
-exhibiting data drift or concept drift (or both) and, in the case of
-concept drift, for identifying both the direction and the severity of
+exhibiting covariate drift, concept drift, both, or neither and,
+for concept drift in particular,
+for identifying both the direction and the severity of
 the drift. Based on this information, we also present a methodology
 for selecting a small subset of the unlabelled new instances for
-manual annotation, such that fine-tuning on these sub-set only
+manual annotation, such that fine-tuning on these sub-set
 achieves accuracy on a par with labelling all new instances and
 fine-tuning on the complete new dataset. We envisage that this
 methodology will become an important part of systems for monitroing ML
