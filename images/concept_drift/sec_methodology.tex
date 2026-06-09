@@ -1,398 +1,250 @@
 
-As discussed in the Introduction, our work targets an active learning
-setup where the system is trained and deployed and where, during
-deployment, the system may request to have a limited number of new
-instances manually annotated for the purpose of fine-tuning and
-adapting.
-
-We will establish the following nomenclature, reflecting how we mapped
-the general deployment scenario above into a concrete ML experiment:
-%
-\begin{itemize}
-\item The \term{training set} and the \term{validation set}
-  constitute the train/test split of the original data.
-  The training set is used to train a classifier and the
-  validation set is used to estimate model accuracy and HAS scale.
-  This step reflects model preparation before deployment.
-\item The \term{fine-tuning set} and the \term{test set} constitute
-  the train/test split of a second dataset. There is an
-  \quoted{annotation budget} for labelling some of the instances of
-  the fine-tuning set, the \term{labelled fine-tuning set}.
-  The test set is fully labelled.
-  The success of the selection is estimated by measuring accuracy on
-  the test set: In the presence of drift, we expect the accuracy of
-  the original model to drop and this drop to be, at least partially,
-  recovered by the fine tuned model.
-  This step reflects model adaptation after deployment.
-  % The \term{fine-tuning set} and the \term{test set}
-  % constitute the train/test split of a second, target dataset
-  % that represents the post-deployment distribution.
-  % The fine-tuning set is first passed through the drift
-  % detection pipeline, which assigns each sample a drift
-  % category (\emph{In-Distribution}, \emph{Pure Data Drift},
-  % \emph{Pure Concept Drift}, or \emph{Full Drift}) based on
-  % the geometric signals described in Section~\ref{sec:detection}.
-  % Given an \term{annotation budget} \textit{i.e.} a constraint on how
-  % many fine-tuning samples may be labelled, the
-  % \term{labelled fine-tuning set} is constructed by selecting
-  % and prioritising samples according to their drift type and
-  % severity, rather than at random. The success of the selection is estimated by measuring accuracy on
-  %the test set: In the presence of drift, we expect the accuracy of
-  %the original model to drop and this drop to be, at least partially,
-  %recovered by the fine tuned model.
-\end{itemize}
-
-
+Our methodology shifts the focus from monolithic drift detection to the identification of informative samples—instances
+that are geometrically ambiguous in the embedding space and thus critical for model adaptation. 
+Unlike standard approaches that rely on output confidence, our approach leverages the hyperspherical geometry of the HASeparator. 
+By monitoring the angular proximity to decision boundaries, we define a geometric signal that prioritizes samples prone to misclassification, 
+effectively constructing a highly informative fine-tuning set under a limited annotation budget.
 
 Since we have scoped our work as addressing gradual drift in the
-meaning of existing labels (as opposed to novelty and to abrupt
-drift), we assume that the labelled fine-tuning set should
+meaning of existing labels, we assume that the labelled fine-tuning set should
 include the instances that are further away from the semantic core of
 our labels, since the instances at the periphery are the ones that
-establish the decision boundaries.
+establish the decision boundaries. However, the periphery that we search for these informative-instances matter.
 
 In the HASeparator embedding space, peripherality is naturally
 quantified by the angular margin $\Delta_i$
 (Equation~\ref{eq:margin}).
 Instances with small $\Delta_i$ lie close to the separation hyperplane 
 between their predicted class and the class with the closest decision boundary,
- and are therefore the most
-geometrically fragile under gradual drift. The training margin
-distribution $\{\Delta_i^{\mathrm{train}}\}$ defines what
-constitutes a central versus peripheral instance on
+and are therefore the most geometrically fragile under gradual drift. The training margin
+distribution $\{\Delta_i^{\mathrm{train}}\}$ defines what constitutes a central versus peripheral instance on
 $\mathcal{S}^{63}$
-Central instances have large margins,
-deep within their class region, while peripheral instances
+Central instances have large margins, deep within their class region, while peripheral instances
 have small margins, near the decision boundaries.
 
-In this context we formulate the following hypotheses:
+In this context we hypothesize that instances located at the periphery of the semantic class 
+regions are the primary drivers of model confusion, and thus, they constitute the most informative subset for fine-tuning:
+
+\begin{itemize}
+    \item[\textbf{H1 (Error Sensitivity):}] Margin-peripheral instances are significantly more prone to misclassification. We validate this using the CIFAR-10N dataset~\cite{} by analyzing the HAS-margin. We, therefore, demonstrate a high correlation with human-annotated noise labels, confirming its role as a robust error detector.
+    \item[\textbf{H2 (Prioritization Efficiency):}] Using the HAS geometry to select peripheral instances yields a more informative fine-tuning set than similar methods in a simple ResNet-50 within the original space, leading to superior accuracy recovery.
+\end{itemize}
 %
-\begin{itemize}
-\item[\textbf{H1}] We will use HAS space and HAS scale to define a
-  distribution curve upon which we can place instances to measure how
-  central or peripheral they are. This is analogous to how data drift
-  is estimated, but we hypothesise that: The instances that are at the
-  edges of the the HAS curve more likely to be misclassified even when
-  they are \emph{not} at the edges of the data drift curve.
+% \begin{itemize}
+% \item[\textbf{H1}] We will use HAS space and HAS scale to define a
+%   distribution curve upon which we can place instances to measure how
+%   central or peripheral they are. This is analogous to how data drift
+%   is estimated, but we hypothesise that: The instances that are at the
+%   edges of the the HAS curve more likely to be misclassified even when
+%   they are \emph{not} at the edges of the data drift curve.
 
-\end{itemize}
+% \end{itemize}
 
-We consider that such instances are the primary drivers of
-concept drift and that, if H1 holds, they constitute the
-most informative subset for fine-tuning. We therefore
-further hypothesise:
+% We consider that such instances are the primary drivers of
+% concept drift and that, if H1 holds, they constitute the
+% most informative subset for fine-tuning. We therefore
+% further hypothesise:
 
-\begin{itemize}
-\item[\textbf{H2}] If we use the HAS space and HAS scale to find the
-  peripheral instances, we get a better selection than what we get in
-  the original space.
-  % Selecting fine-tuning instances by
-  % prioritising those with the smallest angular margin
-  % \textit{i.e.}, those closest to decision boundaries
-  % in HAS space, yields greater accuracy and
-  % margin improvement after fine-tuning than an equivalent
-  % budget of randomly selected instances or instances selected
-  % by confidence score in the original embedding space.
-\end{itemize}
+% \begin{itemize}
+% \item[\textbf{H2}] If we use the HAS space and HAS scale to find the
+%   peripheral instances, we get a better selection than what we get in
+%   the original space.
+%   % Selecting fine-tuning instances by
+%   % prioritising those with the smallest angular margin
+%   % \textit{i.e.}, those closest to decision boundaries
+%   % in HAS space, yields greater accuracy and
+%   % margin improvement after fine-tuning than an equivalent
+%   % budget of randomly selected instances or instances selected
+%   % by confidence score in the original embedding space.
+% \end{itemize}
 
-%
-\begin{itemize}
-\item classifier, original space
-\item HASeparator, embedding
-\item extract: some statistics about the HAS space
-\end{itemize}
+% %
+% \begin{itemize}
+% \item classifier, original space
+% \item HASeparator, embedding
+% \item extract: some statistics about the HAS space
+% \end{itemize}
 
-deploy
+
 
 H1 is evaluated through the drift taxonomy and population-level
 statistical tests described in Section~\ref{sec:detection},
 which assess whether margin-peripheral instances exhibit
 disproportionate misclassification rates independently of
 their data drift status.
-H2 is evaluated through the
-two-pool fine-tuning experiment of Section~\ref{sec:finetune},
-which directly compares the targeted concept-drift selection
-strategy (Pool B) against random global selection and
-data-drift-only selection (Pool A) under identical annotation
+H2 is evaluated through the two-pool fine-tuning experiment of Section~\ref{sec:finetune},
+which directly compares the targeted drift selection
+strategy (Pool B) against ResNet-50 selection selection (Pool A) under identical annotation
 budgets.
 
 
 
-test:
-%
-\begin{itemize}
-\item for each instance x class, calculate a valuation based on extract
-\item if two classes are near, this is a candidate for represent drift
-\item assign a label
-\item fine tuning
-\end{itemize}
+% test:
+% %
+% \begin{itemize}
+% \item for each instance x class, calculate a valuation based on extract
+% \item if two classes are near, this is a candidate for represent drift
+% \item assign a label
+% \item fine tuning
+% \end{itemize}
 
 
 
-
-
-\subsection{Feature Extraction and Geometric Signal Computation}
+\subsection{Feature Extraction and Geometric Fragility Computation}
 \label{sec:extraction}
 
+Our prioritization pipeline operates on the frozen embeddings of the trained HAS model, deriving geometric signals that quantify the ambiguity and fragility of individual samples. These signals are computed post-hoc, independently of the HASeparator training hyperparameters ($\mu$ and $\sigma$), as they arise directly from the hyperspherical structure of the embedding space.
 
-\subsubsection{Baseline Reference Distribution}
+\subsubsection{Geometric Fragility Signal: Angular Margin}
+\label{sec:margin}
 
-For the baseline, two statistics are computed over the training
-embeddings and stored as the reference distribution.
-The global centroid $\bm{c} = \frac{1}{n}\sum_i \be_i$
-and the associated Euclidean distance
-$d_i = \|\be_i - \bm{c}\|_2$
-characterise the spatial spread of the training latent space.
-Prediction confidence $q_i = \max_j\, p_{ij}$, where
-$p_{ij}$ is the softmax probability of class $j$, captures
-output certainty.
-The per-split mean and standard deviation of both $d$ and $q$
-serve as calibration statistics for thresholding at test time.
-
-\subsubsection{HAS-Specific Drift Signals}
-
-The spherical geometry of HAS embeddings enables three additional
-drift-sensitive signals that are not presented in the baseline setting due to its geometrical limitations. These signals arise directly from the hyperspherical structure that the
-HASeparator penalty imposes during training. 
-By explicitly pushing embeddings away from class separation hyperplanes, the trained
-model encodes proximity to decision boundaries as a measurable
-geometric quantity that can be monitored at inference time.
-Crucially, these signals are entirely independent of the
-HASeparator training hyperparameters ($m$ and $\sigma$), which
-govern the geometry during learning.
-Thus the drift signals are computed post-hoc from the frozen model's outputs alone.
-
-
-\paragraph{Angular Margin}
-
-Let $\hat{y}_i$ and $\hat{y}_i^{(2)}$ denote the predicted
-(highest-scoring) and second-best (runner-up) class for sample
-$i$, respectively, where the runner-up class is the one whose
-weight vector $\hat{\bw}_{\hat{y}_i^{(2)}}$ has the second-highest
-cosine similarity with the embedding \textit {i.e.}, the class the model
-was most tempted to predict instead of $\hat{y}_i$.
-The angular margin is defined as the difference between these two
-cosine similarities:
+To quantify geometric fragility, we utilize the angular margin $\Delta_i$. Let $\hat{e}_i$ be the unit-normalized embedding of sample $i$, and let $\hat{w}_{\hat{y}_i}$ and $\hat{w}_{\hat{y}_i^{(2)}}$ represent the unit-normalized weight vectors (prototypes) of the predicted class and the runner-up class, respectively. The runner-up class is defined as the class with the second-highest cosine similarity to the embedding, representing the decision boundary the model is most "tempted" to cross. We compute the angular margin as:
 \begin{equation}
-  \Delta_i \;=\;
-    \bigl(\hat{\be}_i \cdot \hat{\bw}_{\hat{y}_i}\bigr) -
-    \bigl(\hat{\be}_i \cdot \hat{\bw}_{\hat{y}_i^{(2)}}\bigr)\,,
+  \Delta_i \;=\; (\hat{e}_i \cdot \hat{w}_{\hat{y}_i}) - (\hat{e}_i \cdot \hat{w}_{\hat{y}_i^{(2)}})\,.
   \label{eq:margin}
 \end{equation}
-and corresponds to the angular gap between the embedding and the
-nearest class separation hyperplane on $\mathcal{S}^{63}$.
-A large $\Delta_i$ indicates that the embedding lies deep within
-the predicted class region, comfortably distant from any decision
-boundary.
-A small positive $\Delta_i$ signals that the embedding is close to the boundary between the predicted and runner-up class, and therefore geometrically fragile under distribution
-shift.
-Moreover, $\Delta_i \approx 0$ means the embedding sits almost
-exactly on the separation hyperplane, whilea negative $\Delta_i$
-indicates that the embedding has crossed the boundary, ~\textit{ i.e.}, the
-runner-up class is actually more aligned with the embedding than
-the predicted class, which is a strong indicator of
-misclassification.
+This margin $\Delta_i$ corresponds to the angular distance between the embedding and the nearest class separation hyperplane on $\mathcal{S}^{63}$. 
 
-Since the HASeparator penalty during training explicitly maximises
-this margin for all training samples, the training distribution
-$\{\Delta_i^{\mathrm{train}}\}$ provides a natural reference for
-what constitutes a geometrically safe embedding.
-A custom-set sample is flagged as concept-drifted when its margin falls below:
+A large $\Delta_i$ signifies that the embedding resides deep within the predicted class region, far from any decision boundary. Conversely, a small $\Delta_i$ identifies \textit{high-interest samples} that lie in close proximity to the separation hyperplane. When $\Delta_i \approx 0$, the sample sits on the boundary, and a negative $\Delta_i$ indicates that the runner-up class is more aligned with the embedding than the predicted class—a strong indicator of potential misclassification.
+
+We prioritize these \textit{high-interest samples} by selecting instances with the smallest positive $\Delta_i$. Specifically, samples falling below the threshold $\tau_\Delta$ are selected for human annotation:
 \begin{equation}
   \tau_\Delta \;=\; \max\!\bigl(\mu_\Delta - k\,\sigma_\Delta,\ 0\bigr),
   \label{eq:margin_thresh}
 \end{equation}
-where $\mu_\Delta$ and $\sigma_\Delta$ are the mean and standard
-deviation of the training margin distribution, and $k = 2.0$
-is a sensitivity hyperparameter. A custom sample falling below
-$\tau_\Delta$ is therefore one whose embedding is more
-boundary-proximate than approximately $97.7\%$ of training
-samples, constituting a statistically motivated criterion for
-geometric concept drift.
+where $\mu_\Delta$ and $\sigma_\Delta$ are the mean and standard deviation of the training margin distribution, and $k=2.0$ acts as our sensitivity parameter. This geometric criterion effectively isolates samples that are boundary-proximate, and thus geometrically fragile, without requiring explicit ground-truth labels.
+
+% \subsubsection{Interpretability: Conflict Destination}
+% Beyond detecting \textit{whether} a sample is ambiguous, the HAS geometry reveals \textit{towards which class} the sample is drifting. For each high-interest sample $i$, we record the closest-boundary class index $\hat{y}_i^{(2)}$ as the \textit{conflict destination}. 
+
+% This provides two levels of interpretability:
+% \begin{itemize}
+%     \item \textbf{Sample-level:} It identifies the specific decision boundary that a high-interest sample is challenging, facilitating targeted diagnosis by human annotators.
+%     \item \textbf{Population-level:} By aggregating the $\hat{y}_i^{(2)}$ indices across all high-interest samples, we construct a conflict direction matrix. This matrix uncovers systematic confusion patterns (e.g., whether the model consistently confuses "Forest" with "Desert" under distribution shift), providing insights that scalar confidence measures cannot capture.
+% \end{itemize}
+
+\subsubsection{ResNet-50 Reference Statistics}
+While our core method utilizes the angular margin, we maintain the ResNet-50 output certainty as a secondary heuristic. The ResNet-50  confidence $q_i = \max_j\, p_{ij}$ serves as a standard metric to assess model output certainty. However, in our comparative analysis, we show that the geometric signals derived from $\Delta_i$ offer superior sensitivity for identifying samples that the baseline model misclassifies with high confidence—samples that are "hidden" from standard drift detection pipelines.
+
+% \subsection{Drift Detection}
+% \label{sec:detection}
+
+% Drift detection proceeds at two complementary levels.
+% A population-level analysis applies statistical hypothesis
+% tests to the full training and evaluation distributions, and a
+% per-sample classification assigns each evaluation image
+% to one of four drift categories. The statistical approaches
+% utilised are directly deployed from the literature and presented in the following
+% subsections.
 
 
 
-\paragraph{Cosine Distance from the Per-Class Sphere Centroid.}
+% \subsubsection{Population-Level Statistical Tests}
+% \label{sec:pop_tests}
+
+% Four hypothesis tests are applied to characterise the nature
+% of the overall distributional shift between the training and
+% test/fine-tuning sets.
+
+% \textbf{MMD-RBF.} We utilize the Maximum Mean Discrepancy with an 
+% RBF kernel (MMD-RBF)\cite{gretton-borgwardt:2012} serves as a non-parametric 
+% two-sample test on the latent distributions.
+% The squared MMD is computed
+% between the training's set and fine-tuning's set latent vectors for each
+% model, with significance assessed via a permutation test with
+% $n_{\mathrm{perm}} = 300$ permutations. A significant result
+% indicates that the latent distributions are non-identical,
+% confirming the presence of data-level shift.
+
+% \textbf{Confidence Drift Test.} A Kolmogorov--Smirnov (KS) test\cite{kolmogorov:1933,smirnov:1948}
+% is applied to the prediction confidence distributions of the training and
+% fine-tuning sets for each model. A significant result (one
+% where the null hypothesis that the two distributions are drawn
+% from the same underlying distribution is rejected at $p < 0.05$)
+% indicates that the model's output certainty has shifted,
+% consistent with concept drift.
+
+% \textbf{HAS Margin Drift Test.} Building directly on the
+% angular margin signal defined in Equation~\ref{eq:margin},
+% a two-sample KS test is applied to the margin distributions
+% of the training and fine-tuning sets,assesing whether the population-level 
+% boundary proximity has shifted. Since the HASeparator penalty explicitly
+% maximises $\Delta_i$ for all training samples, the training
+% margin distribution represents the geometric baseline of a
+% well-adapted model. A significant drop in the fine-tuning
+% set margin ($\bar{\Delta}^{\mathrm{train}} - \bar{\Delta}^{\mathrm{ft}} > 0$)
+% indicates that embeddings in the fine-tuning set lie, on
+% average, closer to decision boundaries than training
+% embeddings.
+% That is a population-level geometric signature of
+% concept drift that is not accessible to the baseline model,
+% which operates in an unconstrained Euclidean space without
+% a meaningful notion of boundary proximity.
+
+% \textbf{HAS Boundary Direction Test.} Building on the
+% closest-boundary class signal defined in
+% Equation~\ref{sec:closest_boundary}, a $\chi^2$
+% goodness-of-fit test is applied to the distribution of
+% the closest-boundaryclass indices, comparing
+% the fine-tuning set distribution against the training set
+% reference. Whereas the HAS Margin Drift Test quantifies
+% \emph{how much} the population has drifted \emph{toward which boundaries}.
 
 
-While the angular margin captures proximity to decision boundaries,
-a complementary signal is needed to detect shifts in the input
-representation itself ~\textit{i.e.} data-drift.
-For this purpose, the cosine distance from the
-predicted-class sphere centroid $\bm{\mu}_{\hat{y}_i}$ is used
-as the data drift indicator. For a test sample $i$ predicted as
-class $\hat{y}_i$, this is defined as:
-\begin{equation}
-  d_{\mu}(i) \;=\; 1 - \hat{\bm{e}}_i \cdot \bm{\mu}_{\hat{y}_i}\,,
-  \label{eq:cos_dist}
-\end{equation}
-where $\bm{\mu}_{\hat{y}_i}$ is the per-class sphere centroid
-computed from all training embeddings of class $\hat{y}_i$.
-A low $d_\mu(i)$ indicates that the embedding is tightly
-clustered with the training samples of its predicted class on
-$\mathcal{S}^{63}$.
-Additionally, a high value indicates that the embedding
-has drifted away from where training samples of that class
-typically reside, even if the model still predicts that class
-with high confidence.
+% \subsubsection{Per-Sample Drift Classification}
+% \label{sec:persample}
 
-This method has two properties that make it particularly suited
-to the HAS geometry. First, it is class-conditional.
-Thus the reference centroid $\bm{\mu}_{\hat{y}_i}$ depends on the
-predicted class, so the threshold adapts to the natural spread
-of each class on the hypersphere rather than applying a single
-global criterion. Second, it is scale-free, because both
-the embedding and the centroid are unit vectors, the cosine
-distance is bounded in $[0, 2]$ and is not affected by the
-feature scaler $\sigma$ used during training. 
+% Each fine-tuning sample is independently assigned a drift
+% category based on model-specific thresholds based on the
+% training statistics from Section~\ref{sec:extraction}.
 
+% Thus, each fine-tuning image is assigned to one of four mutually exclusive categories
+% based on the joint outcome of the data-drift and concept-drift
+% indicators: \emph{In-Distribution}, \emph{Pure Data Drift}, \emph{Pure Concept Drift},  and \emph{Full Drift}.
 
+% \textbf{Baseline.} A sample is classified as data-drifted if
+% its Euclidean distance from the global centroid exceeds
+% $\tau_d = \mu_d + k\,\sigma_d$, and as concept-drifted if
+% its confidence falls below
+% $\tau_q = \max(\mu_q - k\,\sigma_q,\ 0)$,
+% where $k = 2.0$.
 
-\paragraph{Closest-Boundary Class.}
-\label{sec:closest_boundary}
-Beyond detecting \emph{whether} a sample is concept-drifted,
-the HAS geometry also reveals \emph{toward which class} the
-embedding is drifting. For each sample $i$, the closest-boundary
-class index (already computed during the
-angular margin calculation) is recorded as the
-\emph{closest-boundary class}, or equivalently the predicted
-drift destination.
-This identifies the class whose weight vector is most
-aligned with the embedding after the predicted class, and
-therefore indicates the decision boundary that the embedding
-is closest to on $\mathcal{S}^{63}$.
+% \textbf{HAS Model.} Data drift is detected via the
+% class-conditional cosine distance threshold of
+% Equation~\ref{eq:cos_dist}, and concept drift via the
+% angular margin threshold of Equation~\ref{eq:margin_thresh},
+% both with $k = 2.0$.
+% Both thresholds follow the same $k\sigma$ criterion applied to
+% the training distribution of each signal, but in opposite
+% directions.
+% Data drift is detected when $d_\mu(i)$ exceeds
+% the upper tail of its training distribution, indicating the
+% embedding has moved away from its class centroid, while concept drift
+% is detected when $\Delta_i$ falls below the lower tail,
+% indicating the embedding has moved toward a decision boundary.
 
-The closest-boundary class provides two complementary pieces
-of information. First, at the \emph{sample level}, it
-identifies which specific boundary a concept-drifted sample
-is pointing at, enabling interpretable per-instance
-drift diagnosis.
-Second, at the \emph{population level}, aggregating
-$\hat{y}_i^{(2)}$ across all concept-drifted samples
-yields a drift direction matrix that reveals systematic
-confusion patterns between class pairs under distribution
-shift. 
+% \subsubsection{Drift Direction and Hierarchical Analysis}
+% \label{sec:direction}
 
+% For concept-drifted samples, the closest-boundary class
+% $\hat{y}_i^{(2)}$ is recorded as the predicted drift
+% destination. A cross-tabulation of true class versus predicted
+% drift destination reveals the dominant pairwise confusion
+% direction for each class under distribution shift.
+% Complementarily, HAS drift direction matrices report the
+% normalised flow of samples from each true class to each
+% closest-boundary class, computed separately for the training
+% set, the full fine-tuning set, and the concept-drifted subset.
+% A shift in the direction distribution between training and
+% fine-tuning sets is a hallmark of concept drift that cannot
+% be captured by scalar confidence measures alone.
 
-\subsection{Drift Detection}
-\label{sec:detection}
-
-Drift detection proceeds at two complementary levels.
-A population-level analysis applies statistical hypothesis
-tests to the full training and evaluation distributions, and a
-per-sample classification assigns each evaluation image
-to one of four drift categories. The statistical approaches
-utilised are directly deployed from the literature and presented in the following
-subsections.
-
-
-
-\subsubsection{Population-Level Statistical Tests}
-\label{sec:pop_tests}
-
-Four hypothesis tests are applied to characterise the nature
-of the overall distributional shift between the training and
-test/fine-tuning sets.
-
-\textbf{MMD-RBF.} We utilize the Maximum Mean Discrepancy with an 
-RBF kernel (MMD-RBF)\cite{gretton-borgwardt:2012} serves as a non-parametric 
-two-sample test on the latent distributions.
-The squared MMD is computed
-between the training's set and fine-tuning's set latent vectors for each
-model, with significance assessed via a permutation test with
-$n_{\mathrm{perm}} = 300$ permutations. A significant result
-indicates that the latent distributions are non-identical,
-confirming the presence of data-level shift.
-
-\textbf{Confidence Drift Test.} A Kolmogorov--Smirnov (KS) test\cite{kolmogorov:1933,smirnov:1948}
-is applied to the prediction confidence distributions of the training and
-fine-tuning sets for each model. A significant result (one
-where the null hypothesis that the two distributions are drawn
-from the same underlying distribution is rejected at $p < 0.05$)
-indicates that the model's output certainty has shifted,
-consistent with concept drift.
-
-\textbf{HAS Margin Drift Test.} Building directly on the
-angular margin signal defined in Equation~\ref{eq:margin},
-a two-sample KS test is applied to the margin distributions
-of the training and fine-tuning sets,assesing whether the population-level 
-boundary proximity has shifted. Since the HASeparator penalty explicitly
-maximises $\Delta_i$ for all training samples, the training
-margin distribution represents the geometric baseline of a
-well-adapted model. A significant drop in the fine-tuning
-set margin ($\bar{\Delta}^{\mathrm{train}} - \bar{\Delta}^{\mathrm{ft}} > 0$)
-indicates that embeddings in the fine-tuning set lie, on
-average, closer to decision boundaries than training
-embeddings.
-That is a population-level geometric signature of
-concept drift that is not accessible to the baseline model,
-which operates in an unconstrained Euclidean space without
-a meaningful notion of boundary proximity.
-
-\textbf{HAS Boundary Direction Test.} Building on the
-closest-boundary class signal defined in
-Equation~\ref{sec:closest_boundary}, a $\chi^2$
-goodness-of-fit test is applied to the distribution of
-the closest-boundaryclass indices, comparing
-the fine-tuning set distribution against the training set
-reference. Whereas the HAS Margin Drift Test quantifies
-\emph{how much} the population has drifted \emph{toward which boundaries}.
-
-
-\subsubsection{Per-Sample Drift Classification}
-\label{sec:persample}
-
-Each fine-tuning sample is independently assigned a drift
-category based on model-specific thresholds based on the
-training statistics from Section~\ref{sec:extraction}.
-
-Thus, each fine-tuning image is assigned to one of four mutually exclusive categories
-based on the joint outcome of the data-drift and concept-drift
-indicators: \emph{In-Distribution}, \emph{Pure Data Drift}, \emph{Pure Concept Drift},  and \emph{Full Drift}.
-
-\textbf{Baseline.} A sample is classified as data-drifted if
-its Euclidean distance from the global centroid exceeds
-$\tau_d = \mu_d + k\,\sigma_d$, and as concept-drifted if
-its confidence falls below
-$\tau_q = \max(\mu_q - k\,\sigma_q,\ 0)$,
-where $k = 2.0$.
-
-\textbf{HAS Model.} Data drift is detected via the
-class-conditional cosine distance threshold of
-Equation~\ref{eq:cos_dist}, and concept drift via the
-angular margin threshold of Equation~\ref{eq:margin_thresh},
-both with $k = 2.0$.
-Both thresholds follow the same $k\sigma$ criterion applied to
-the training distribution of each signal, but in opposite
-directions.
-Data drift is detected when $d_\mu(i)$ exceeds
-the upper tail of its training distribution, indicating the
-embedding has moved away from its class centroid, while concept drift
-is detected when $\Delta_i$ falls below the lower tail,
-indicating the embedding has moved toward a decision boundary.
-
-\subsubsection{Drift Direction and Hierarchical Analysis}
-\label{sec:direction}
-
-For concept-drifted samples, the closest-boundary class
-$\hat{y}_i^{(2)}$ is recorded as the predicted drift
-destination. A cross-tabulation of true class versus predicted
-drift destination reveals the dominant pairwise confusion
-direction for each class under distribution shift.
-Complementarily, HAS drift direction matrices report the
-normalised flow of samples from each true class to each
-closest-boundary class, computed separately for the training
-set, the full fine-tuning set, and the concept-drifted subset.
-A shift in the direction distribution between training and
-fine-tuning sets is a hallmark of concept drift that cannot
-be captured by scalar confidence measures alone.
-
-Both models are additionally evaluated at the sub-category
-level using KS tests on the latent distance and confidence
-distributions per sub-category. The fraction of drifted
-sub-categories within each class provides a class-level drift
-verdict and allows comparisons between models regarding which
-class distributions are most affected by the domain gap.
+% Both models are additionally evaluated at the sub-category
+% level using KS tests on the latent distance and confidence
+% distributions per sub-category. The fraction of drifted
+% sub-categories within each class provides a class-level drift
+% verdict and allows comparisons between models regarding which
+% class distributions are most affected by the domain gap.
 
 
 

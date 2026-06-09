@@ -1,5 +1,37 @@
 
+To validate our geometric prioritization approach, we utilize two distinct datasets that serve complementary roles: CIFAR-10N for error-sensitivity validation and ARXPHOTO314 for real-world model adaptation.
 
+\subsubsection{Error-Sensitivity Validation: CIFAR-10N}
+\label{sec:cifar10n}
+We utilize the CIFAR-10N dataset to validate \textbf{H1}. CIFAR-10N provides human-annotated noise labels for the CIFAR-10 training set, capturing the collective consensus of multiple annotators. Unlike standard datasets, this allows us to quantify the "severity" of an error \textit{i.e., how many humans disagreed with the label}. We use this dataset to demonstrate that our geometric margin $\Delta_i$ acts as a robust proxy for human-verified label noise. By showing that low-margin samples are disproportionately likely to be human-annotated errors, we confirm that the HAS model functions as a reliable error detector without needing explicit ground-truth labels.
+
+\subsubsection{Model Adaptation Task: Landscape \& ARXPHOTO314}
+\label{sec:target_datasets}
+To demonstrate model adaptation, we evaluate our pipeline on the \textit{Landscape Recognition} dataset \cite{utkarsh} as the training set and a subset of \textit{ARXPHOTO314} \cite{arxnetsa:2025} as the drift identification set. 
+
+The Landscape Recognition dataset consists of $\approx 12{,}000$ curated, web-scraped images across five categories (\texttt{Coast}, \texttt{Desert}, \texttt{Forest}, \texttt{Glacier}, \texttt{Mountain}). This serves as the reference distribution where the HASeparator learns its hyperspherical prototypes. 
+
+The ARXPHOTO314 dataset comprises $18{,}320$ unconstrained, real-world mobile photographs, characterized by high variability in lighting, framing, and environmental conditions. We map the similar ones to the Landscapes's five classes (Table~\ref{tab:classmap}). This target domain represents a real-world distributional shift where the model encounters geometrically ambiguous samples. Our prioritization pipeline exploits this shift by identifying \textit{high-interest samples} instances where the model’s learned boundaries are weakest—and selecting them for targeted fine-tuning to recover accuracy under limited annotation budgets.
+
+\begin{table}[htbp]
+\centering
+\caption{Class mapping between ARXPHOTO314 (target) and
+         Landscape Recognition (source).
+         Label indices correspond to the training class ordering.}
+\label{tab:classmap}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{} l c l @{}}
+\toprule
+\textbf{ARXPHOTO314 folder} & \textbf{Label} & \textbf{Source class} \\
+\midrule
+Beach Landscape       & 0 & Coast    \\
+Desert Landscape      & 1 & Desert   \\
+Forest Landscape      & 2 & Forest   \\
+Ice \& Snow Landscape & 3 & Glacier  \\
+Mountain Landscape    & 4 & Mountain \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 
 \subsection{Model Architectures and Training}
@@ -14,7 +46,7 @@ of the original HASeparator paper \cite{kansizoglou-santavas-etal:2020}
 and provides a shared, comparable latent space for drift analysis
 across both models.
 
-\subsubsection{Baseline Model}
+\subsubsection{ResNet-50 as Baseline Model}
 
 The baseline appends a linear classification head
 $\mathrm{Linear}(64, C)$ to the bottleneck and trains with
