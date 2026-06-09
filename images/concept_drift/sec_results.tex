@@ -1,103 +1,127 @@
-In this section we present the results that validate our hypothesis described in Section~\ref{}.
-Thus, Section~\ref{sec:drift_analysis} presentes the drift detection results as well as the identification of the drift type results for the baseline compared to the HAS method.
-Section~\ref{sec:res_direction} presented the results of the drift directions, namely the asnwer to the \emph{toward which class} question we set at the methodology section.
-Lastly, Section~\ref{sec:res_finetune} confirm the Hypothesis formed in Section~\ref{}.
+In this section we present the results that validate our hypothesis described in Section~\ref{sec:method}.
+% Thus, Section~\ref{sec:drift_analysis} presentes the drift detection results as well as the identification of the drift type results for the baseline compared to the HAS method.
+% Section~\ref{sec:res_direction} presented the results of the drift directions, namely the asnwer to the \emph{toward which class} question we set at the methodology section.
+% Lastly, Section~\ref{sec:res_finetune} confirm the Hypothesis formed in Section~\ref{}.
 
 
-\subsection{Drift Analysis} 
-\label{sec:drift_analysis}
+% \subsection{Drift Analysis} 
+% \label{sec:drift_analysis}
 
-Towards that, Table~\ref{tab:pop_tests} presents the statistical results of the six
-population-level statistical tests described in
-Section~\ref{}. 
-The MMD-RBF test assesses whether the latent space distributions of the two sets are 
-statistically distinguisable.
-Moreover, the $p$-value indicates the statistical significance of that difference.
-Small $p$-value indicate that the two datasets represent different distributions.
-Both models detect data-level shift via MMD-RBF, with
-comparable statistics ($0.0175$ for the baseline,
-$0.0146$ for HAS), confirming that the latent distributions
-of the two datasets are non-identical.
+% Towards that, Table~\ref{tab:pop_tests} presents the statistical results of the six
+% population-level statistical tests described in
+% Section~\ref{}. 
+% The MMD-RBF test assesses whether the latent space distributions of the two sets are 
+% statistically distinguisable.
+% Moreover, the $p$-value indicates the statistical significance of that difference.
+% Small $p$-value indicate that the two datasets represent different distributions.
+% Both models detect data-level shift via MMD-RBF, with
+% comparable statistics ($0.0175$ for the baseline,
+% $0.0146$ for HAS), confirming that the latent distributions
+% of the two datasets are non-identical.
 
-Additionally, to assess whether this shift is related ot the model's output behaviour, the KS test is applied.
-Both models show highly signigicant confidence drops, but a notably different magnitude.
-The larger KS statistic for HAS reflects the methodologies discriminative characteristics.
-Thus, because HAS predictions are more concentrated and peaked on the training data, the confidence drop under distribution shift.
+% Additionally, to assess whether this shift is related ot the model's output behaviour, the KS test is applied.
+% Both models show highly signigicant confidence drops, but a notably different magnitude.
+% The larger KS statistic for HAS reflects the methodologies discriminative characteristics.
+% Thus, because HAS predictions are more concentrated and peaked on the training data, the confidence drop under distribution shift.
 
-However, confidence alone cannot distinguish \emph{why} the model has become uncertain, as uncertain can arise from diferrent types of drift. 
-This is the core limitation of the confidence-based drift detection, what motivated the two additional HAS test.
+% However, confidence alone cannot distinguish \emph{why} the model has become uncertain, as uncertain can arise from diferrent types of drift. 
+% This is the core limitation of the confidence-based drift detection, what motivated the two additional HAS test.
 
-The two HAS-exclusive metrics \textit{i.e.,} KS HAS margin and $\chi^2$ (boundary dir.), provide the \emph{why} answer that the baseline cannot access. The KS test on angular margins
-yields a statistic of $0.392$ ($p \approx 1.36 \times
-10^{-243}$), confirming that fine-tuning set embeddings
-lie significantly closer to decision boundaries than
-training embeddings.
-A geometric signature of concept drift invisible to confidence-only methods. 
-Lastly, the $\chi^2$ boundary direction test (statistic $= 82.54$,
-$p \approx 5.05 \times 10^{-17}$) further confirms that drift is not uniformly distributed across class boundaries but is systematically concentrated toward specific class
-pairs, motivating the directional analysis described in Section~\ref{sec:closest_boundary}.
+% The two HAS-exclusive metrics \textit{i.e.,} KS HAS margin and $\chi^2$ (boundary dir.), provide the \emph{why} answer that the baseline cannot access. The KS test on angular margins
+% yields a statistic of $0.392$ ($p \approx 1.36 \times
+% 10^{-243}$), confirming that fine-tuning set embeddings
+% lie significantly closer to decision boundaries than
+% training embeddings.
+% A geometric signature of concept drift invisible to confidence-only methods. 
+% Lastly, the $\chi^2$ boundary direction test (statistic $= 82.54$,
+% $p \approx 5.05 \times 10^{-17}$) further confirms that drift is not uniformly distributed across class boundaries but is systematically concentrated toward specific class
+% pairs, motivating the directional analysis described in Section~\ref{sec:closest_boundary}.
 
 
 
-\begin{table}[htbp]
-\centering
-\caption{Population-level drift test results. All tests are significant at $p < 0.01$.}
-\label{tab:pop_tests}
-\renewcommand{\arraystretch}{1.3}
-\begin{tabular}{@{} l l r r c @{}}
-\toprule
-\textbf{Test} & \textbf{Model} & \textbf{Statistic} & \textbf{$p$-value} & \textbf{Drifted} \\
-\midrule
-MMD (RBF)               & Baseline & 0.0175 & $3.32 \times 10^{-3}$  & \checkmark \\
-MMD (RBF)               & HAS      & 0.0146 & $3.32 \times 10^{-3}$  & \checkmark \\
-KS (confidence)         & Baseline & 0.325  & $1.96 \times 10^{-166}$ & \checkmark \\
-KS (confidence)         & HAS      & 0.403  & $6.56 \times 10^{-258}$ & \checkmark \\
-KS (HAS margin)         & HAS      & 0.392  & $1.36 \times 10^{-243}$ & \checkmark \\
-$\chi^2$ (boundary dir.)& HAS      & 82.54  & $5.05 \times 10^{-17}$  & \checkmark \\
-\bottomrule
-\end{tabular}
+% \begin{table}[htbp]
+% \centering
+% \caption{Population-level drift test results. All tests are significant at $p < 0.01$.}
+% \label{tab:pop_tests}
+% \renewcommand{\arraystretch}{1.3}
+% \begin{tabular}{@{} l l r r c @{}}
+% \toprule
+% \textbf{Test} & \textbf{Model} & \textbf{Statistic} & \textbf{$p$-value} & \textbf{Drifted} \\
+% \midrule
+% MMD (RBF)               & Baseline & 0.0175 & $3.32 \times 10^{-3}$  & \checkmark \\
+% MMD (RBF)               & HAS      & 0.0146 & $3.32 \times 10^{-3}$  & \checkmark \\
+% KS (confidence)         & Baseline & 0.325  & $1.96 \times 10^{-166}$ & \checkmark \\
+% KS (confidence)         & HAS      & 0.403  & $6.56 \times 10^{-258}$ & \checkmark \\
+% KS (HAS margin)         & HAS      & 0.392  & $1.36 \times 10^{-243}$ & \checkmark \\
+% $\chi^2$ (boundary dir.)& HAS      & 82.54  & $5.05 \times 10^{-17}$  & \checkmark \\
+% \bottomrule
+% \end{tabular}
+% \end{table}
+
+
+% Having established the drift identification, next step is understanding the type of drift 
+% that occurs. Table~\ref{tab:taxonomy} compares the percentage of
+% fine-tuning samples assigned to each drift category under the baseline confidence-based
+% taxonomy, the HAS confidence-based taxonomy, and the
+% proposed HAS margin-based taxonomy.
+
+% \begin{table}[htbp]
+% \centering
+% \caption{Drift taxonomy comparison. Percentages indicate the fraction of fine-tuning samples assigned to each category under three detection schemes.}
+% \label{tab:taxonomy}
+% \renewcommand{\arraystretch}{1.3}
+% \begin{tabular}{@{} l r r r @{}}
+% \toprule
+% \textbf{Category} & \textbf{Baseline} &
+% \textbf{HAS-conf} & \textbf{HAS-margin} \\
+% \midrule
+% In-Distribution    & 72.0\% & 59.8\% & 56.8\% \\
+% Pure Data Drift    &  2.0\% & 13.4\% &  5.1\% \\
+% Pure Concept Drift & 25.9\% &  0.1\% &  3.1\% \\
+% Full Drift (both)  &  0.0\% & 26.7\% & 35.0\% \\
+% \bottomrule
+% \end{tabular}
+% \end{table}
+
+
+
+% From Table~\ref{tab:taxonomy} we identify that the baseline classifies
+% $72.0\%$ of fine-tuning samples as In-Distribution, compared to $56.8\%$ under HAS-margin.
+% This indicates that the confidence-only criterion misses a substantial fraction of
+% drifted samples. Second, and most critically, the baseline detects \emph{zero} instances of Full Drift, whereas HAS-margin identifies $35.0\%$ of samples as compared shift in both their embedding representation and their boundary proximity. 
+% Lastly, the baseline flags $25.9\%$ of samples as Pure Concept Drift via
+% low confidence, whereas HAS-margin assigns only $3.1\%$ to this category.
+% Many samples that appear uncertain under softmax confidence are, geometrically, not
+% boundary-proximate in HAS space, suggesting that the confidence signal produces false concept drift positives for samples that are simply data-shifted rather than
+% decision-boundary-confused.
+
+% Comparing HAS-conf against HAS-margin reveals the added value of the angular margin over confidence even within the same embedding space. HAS-margin assigns $35.0\%$ to
+% Full Drift versus $26.7\%$ for HAS-conf, and reduces the spurious Pure Concept Drift fraction from near-zero ($0.1\%$) to a meaningful but small $3.1\%$, reflecting
+% a geometrically grounded separation of the two drift types.
+
+\subsection{Error Sensitivity Validation}
+\label{sec:res_cifar}
+We first validate \textbf{H1} by assessing the HAS-margin's sensitivity to label noise using the CIFAR-10N dataset. 
+Table \ref{tab:cifar_sensitivity} demonstrates that the HAS-margin disproportionately flags human-annotated errors compared to confidence-based baselines. 
+
+\begin{table}[h]
+    \centering
+    \caption{Drift detection rates by human annotator agreement}
+    \label{tab:cifar_sensitivity}
+    \begin{tabular}{cccc}
+        \toprule
+        \textbf{Humans Wrong} & \textbf{Total} & \textbf{Baseline (\%)} & \textbf{HAS (\%)} \\
+        \midrule
+        0/3 & 29{,}896 & 0.66 & 3.04 \\
+        1/3 & 14{,}777 & 1.06 & 4.03 \\
+        2/3 &  4{,}260 & 1.57 & 6.46 \\
+        3/3 &  1{,}067 & 3.19 & 11.81 \\
+        \bottomrule
+    \end{tabular}
 \end{table}
 
-
-Having established the drift identification, next step is understanding the type of drift 
-that occurs. Table~\ref{tab:taxonomy} compares the percentage of
-fine-tuning samples assigned to each drift category under the baseline confidence-based
-taxonomy, the HAS confidence-based taxonomy, and the
-proposed HAS margin-based taxonomy.
-
-\begin{table}[htbp]
-\centering
-\caption{Drift taxonomy comparison. Percentages indicate the fraction of fine-tuning samples assigned to each category under three detection schemes.}
-\label{tab:taxonomy}
-\renewcommand{\arraystretch}{1.3}
-\begin{tabular}{@{} l r r r @{}}
-\toprule
-\textbf{Category} & \textbf{Baseline} &
-\textbf{HAS-conf} & \textbf{HAS-margin} \\
-\midrule
-In-Distribution    & 72.0\% & 59.8\% & 56.8\% \\
-Pure Data Drift    &  2.0\% & 13.4\% &  5.1\% \\
-Pure Concept Drift & 25.9\% &  0.1\% &  3.1\% \\
-Full Drift (both)  &  0.0\% & 26.7\% & 35.0\% \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-
-
-From Table~\ref{tab:taxonomy} we identify that the baseline classifies
-$72.0\%$ of fine-tuning samples as In-Distribution, compared to $56.8\%$ under HAS-margin.
-This indicates that the confidence-only criterion misses a substantial fraction of
-drifted samples. Second, and most critically, the baseline detects \emph{zero} instances of Full Drift, whereas HAS-margin identifies $35.0\%$ of samples as compared shift in both their embedding representation and their boundary proximity. 
-Lastly, the baseline flags $25.9\%$ of samples as Pure Concept Drift via
-low confidence, whereas HAS-margin assigns only $3.1\%$ to this category.
-Many samples that appear uncertain under softmax confidence are, geometrically, not
-boundary-proximate in HAS space, suggesting that the confidence signal produces false concept drift positives for samples that are simply data-shifted rather than
-decision-boundary-confused.
-
-Comparing HAS-conf against HAS-margin reveals the added value of the angular margin over confidence even within the same embedding space. HAS-margin assigns $35.0\%$ to
-Full Drift versus $26.7\%$ for HAS-conf, and reduces the spurious Pure Concept Drift fraction from near-zero ($0.1\%$) to a meaningful but small $3.1\%$, reflecting
-a geometrically grounded separation of the two drift types.
+As the consensus of human disagreement increases (from 0/3 to 3/3), the recall gap between the HAS-margin and the confidence-based baseline widens significantly. 
+Specifically, for samples with total human disagreement (3/3), the HAS method achieves a recall of $11.81\%$, nearly 4 times higher than the $3.19\%$ achieved by the baseline. This confirms that our geometric margin $\Delta_i$ effectively acts as an automated, budget-efficient error detector, surfacing "high-interest" samples that are boundary-proximate and geometrically fragile, without requiring ground-truth labels during the selection process.
 
 
 \subsection{Concept Drift Direction Analysis}
