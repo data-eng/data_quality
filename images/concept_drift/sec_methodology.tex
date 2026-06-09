@@ -18,7 +18,7 @@ Instances with small $\Delta_i$ lie close to the separation hyperplane
 between their predicted class and the class with the closest decision boundary,
 and are therefore the most geometrically fragile under gradual drift. The training margin
 distribution $\{\Delta_i^{\mathrm{train}}\}$ defines what constitutes a central versus peripheral instance on
-$\mathcal{S}^{63}$
+$\mathcal{S}^{63}$.
 Central instances have large margins, deep within their class region, while peripheral instances
 have small margins, near the decision boundaries.
 
@@ -26,8 +26,8 @@ In this context we hypothesize that instances located at the periphery of the se
 regions are the primary drivers of model confusion, and thus, they constitute the most informative subset for fine-tuning:
 
 \begin{itemize}
-    \item[\textbf{H1 (Error Sensitivity):}] Margin-peripheral instances are significantly more prone to misclassification. We validate this using the CIFAR-10N dataset~\cite{} by analyzing the HAS-margin. We, therefore, demonstrate a high correlation with human-annotated noise labels, confirming its role as a robust error detector.
-    \item[\textbf{H2 (Prioritization Efficiency):}] Using the HAS geometry to select peripheral instances yields a more informative fine-tuning set than similar methods in a simple ResNet-50 within the original space, leading to superior accuracy recovery.
+  \item[\textbf{H1 (Error Sensitivity):}] Margin-peripheral instances are significantly more prone to misclassification. We validate this using the CIFAR-10N dataset~\cite{} by analyzing the HAS-margin. We, therefore, demonstrate a high correlation with human-annotated noise labels, confirming its role as a robust error detector.
+  \item[\textbf{H2 (Prioritization Efficiency):}] Using the HAS geometry to select peripheral instances yields a more informative fine-tuning set than similar methods in a simple ResNet-50 within the original space, leading to superior accuracy recovery.
 \end{itemize}
 %
 % \begin{itemize}
@@ -66,16 +66,20 @@ regions are the primary drivers of model confusion, and thus, they constitute th
 % \end{itemize}
 
 
-
-H1 is evaluated through the drift taxonomy and population-level
-statistical tests described in Section~\ref{sec:detection},
-which assess whether margin-peripheral instances exhibit
-disproportionate misclassification rates independently of
-their data drift status.
-H2 is evaluated through the two-pool fine-tuning experiment of Section~\ref{sec:finetune},
-which directly compares the targeted drift selection
-strategy (Pool B) against ResNet-50 selection selection (Pool A) under identical annotation
-budgets.
+The hypotheses are evaluated as follows:
+\begin{itemize}
+    \item \textbf{H1} is evaluated by analyzing the HAS-margin on the CIFAR-10N dataset in Section~\ref{sec:results}. 
+    \item \textbf{H2} is evaluated through the model adaptation experiments on the Landscape and ARXPHOTO314 datasets in Section~\ref{sec:results}. We compare our targeted geometric selection strategy against a baseline ResNet-50 confidence-based selection under identical annotation budgets, measuring the respective accuracy recovery in the target domain.
+\end{itemize}
+% H1 is evaluated through the drift taxonomy and population-level
+% statistical tests described in Section~\ref{sec:results},
+% which assess whether margin-peripheral instances exhibit
+% disproportionate misclassification rates independently of
+% their data drift status.
+% H2 is evaluated through the two-pool fine-tuning experiment of Section~\ref{sec:finetune},
+% which directly compares the targeted drift selection
+% strategy (Pool B) against ResNet-50 selection selection (Pool A) under identical annotation
+% budgets.
 
 
 
