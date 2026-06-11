@@ -26,8 +26,25 @@ In this context we hypothesize that instances located at the periphery of the se
 regions are the primary drivers of model confusion, and thus, they constitute the most informative subset for fine-tuning:
 
 \begin{itemize}
-  \item[\textbf{H1 (Error Sensitivity):}] Margin-peripheral instances are significantly more prone to misclassification. We validate this using the CIFAR-10N dataset~\cite{} by analyzing the HAS-margin. We, therefore, demonstrate a high correlation with human-annotated noise labels, confirming its role as a robust error detector.
-  \item[\textbf{H2 (Prioritization Efficiency):}] Using the HAS geometry to select peripheral instances yields a more informative fine-tuning set than similar methods in a simple ResNet-50 within the original space, leading to superior accuracy recovery.
+  \item[\textbf{H1 (Error Sensitivity):}] Margin-peripheral instances are significantly more prone to misclassification. 
+  We validate this using the CIFAR-10N dataset~\cite{} by analyzing the HAS-margin. We, therefore, demonstrate a high correlation with human-annotated noise labels, 
+  confirming its role as a robust error detector.
+  \item[\textbf{H2 (Prioritization Efficiency):}] Using the HAS geometry to select peripheral instances yields a more informative fine-tuning set than similar 
+  methods in a simple ResNet-50 within the original space, leading to superior accuracy recovery.
+\end{itemize}
+
+\noindent The hypotheses are evaluated as follows:
+
+\begin{itemize}
+    \item \textbf{H1} is evaluated in Section~\ref{sec:results} by analyzing 
+    the HAS-margin distribution on CIFAR-10N, stratified by the number of 
+    human annotators who labeled each instance incorrectly (0/3 through 3/3).
+
+    \item \textbf{H2} is evaluated through model adaptation experiments on 
+    the Landscape Recognition and ARXPHOTO314 datasets 
+    (Section~\ref{sec:results}), comparing our geometric selection strategy 
+    against ResNet-50 confidence-based selection under identical annotation 
+    budgets and measuring accuracy recovery in the target domain.
 \end{itemize}
 %
 % \begin{itemize}
@@ -66,11 +83,7 @@ regions are the primary drivers of model confusion, and thus, they constitute th
 % \end{itemize}
 
 
-The hypotheses are evaluated as follows:
-\begin{itemize}
-    \item \textbf{H1} is evaluated by analyzing the HAS-margin on the CIFAR-10N dataset in Section~\ref{sec:results}. 
-    \item \textbf{H2} is evaluated through the model adaptation experiments on the Landscape and ARXPHOTO314 datasets in Section~\ref{sec:results}. We compare our targeted geometric selection strategy against a baseline ResNet-50 confidence-based selection under identical annotation budgets, measuring the respective accuracy recovery in the target domain.
-\end{itemize}
+
 % H1 is evaluated through the drift taxonomy and population-level
 % statistical tests described in Section~\ref{sec:results},
 % which assess whether margin-peripheral instances exhibit
@@ -97,26 +110,40 @@ The hypotheses are evaluated as follows:
 \subsection{Feature Extraction and Geometric Fragility Computation}
 \label{sec:extraction}
 
-Our prioritization pipeline operates on the frozen embeddings of the trained HAS model, deriving geometric signals that quantify the ambiguity and fragility of individual samples. These signals are computed post-hoc, independently of the HASeparator training hyperparameters ($\mu$ and $\sigma$), as they arise directly from the hyperspherical structure of the embedding space.
+Our prioritization pipeline operates on the frozen embeddings of the trained HAS model, deriving geometric signals 
+that quantify the ambiguity and fragility of individual samples. These signals are computed post-hoc, independently 
+of the HASeparator training hyperparameters ($\mu$ and $\sigma$), as they arise directly from the hyperspherical 
+structure of the embedding space.
 
 \subsubsection{Geometric Fragility Signal: Angular Margin}
 \label{sec:margin}
 
-To quantify geometric fragility, we utilize the angular margin $\Delta_i$. Let $\hat{e}_i$ be the unit-normalized embedding of sample $i$, and let $\hat{w}_{\hat{y}_i}$ and $\hat{w}_{\hat{y}_i^{(2)}}$ represent the unit-normalized weight vectors (prototypes) of the predicted class and the runner-up class, respectively. The runner-up class is defined as the class with the second-highest cosine similarity to the embedding, representing the decision boundary the model is most "tempted" to cross. We compute the angular margin as:
+To quantify geometric fragility, we utilize the angular margin $\Delta_i$. Let $\hat{e}_i$ be the unit-normalized embedding of 
+sample $i$, and let $\hat{w}_{\hat{y}_i}$ and $\hat{w}_{\hat{y}_i^{(2)}}$ represent the unit-normalized weight vectors of the 
+predicted class and the runner-up class, respectively. The runner-up class is defined as the class with the second-highest 
+cosine similarity to the embedding, representing the decision boundary the model is most "tempted" to cross. We compute the 
+angular margin as:
 \begin{equation}
   \Delta_i \;=\; (\hat{e}_i \cdot \hat{w}_{\hat{y}_i}) - (\hat{e}_i \cdot \hat{w}_{\hat{y}_i^{(2)}})\,.
   \label{eq:margin}
 \end{equation}
 This margin $\Delta_i$ corresponds to the angular distance between the embedding and the nearest class separation hyperplane on $\mathcal{S}^{63}$. 
 
-A large $\Delta_i$ signifies that the embedding resides deep within the predicted class region, far from any decision boundary. Conversely, a small $\Delta_i$ identifies \textit{high-interest samples} that lie in close proximity to the separation hyperplane. When $\Delta_i \approx 0$, the sample sits on the boundary, and a negative $\Delta_i$ indicates that the runner-up class is more aligned with the embedding than the predicted class—a strong indicator of potential misclassification.
+A large $\Delta_i$ signifies that the embedding resides deep within the predicted class region, far from any decision boundary. 
+Conversely, a small $\Delta_i$ identifies \textit{high-interest samples} that lie in close proximity to the separation hyperplane. 
+When $\Delta_i \approx 0$, the sample sits on the boundary, and a negative $\Delta_i$ indicates that the runner-up class is more 
+aligned with the embedding than the predicted class—a strong indicator of potential misclassification.
 
-We prioritize these \textit{high-interest samples} by selecting instances with the smallest positive $\Delta_i$. Specifically, samples falling below the threshold $\tau_\Delta$ are selected for human annotation:
+We prioritize these \textit{high-interest samples} by selecting instances with the smallest positive $\Delta_i$. Specifically, 
+samples falling below the threshold $\tau_\Delta$ are selected for human annotation:
 \begin{equation}
   \tau_\Delta \;=\; \max\!\bigl(\mu_\Delta - k\,\sigma_\Delta,\ 0\bigr),
   \label{eq:margin_thresh}
 \end{equation}
-where $\mu_\Delta$ and $\sigma_\Delta$ are the mean and standard deviation of the training margin distribution, and $k=2.0$ acts as our sensitivity parameter. This geometric criterion effectively isolates samples that are boundary-proximate, and thus geometrically fragile, without requiring explicit ground-truth labels.
+
+where $\mu_\Delta$ and $\sigma_\Delta$ are the mean and standard deviation of the training margin distribution, 
+and $k=2.0$ acts as our sensitivity parameter. This geometric criterion effectively isolates samples that are boundary-proximate, 
+and thus geometrically fragile, without requiring explicit ground-truth labels.
 
 % \subsubsection{Interpretability: Conflict Destination}
 % Beyond detecting \textit{whether} a sample is ambiguous, the HAS geometry reveals \textit{towards which class} the sample is drifting. For each high-interest sample $i$, we record the closest-boundary class index $\hat{y}_i^{(2)}$ as the \textit{conflict destination}. 
@@ -127,8 +154,18 @@ where $\mu_\Delta$ and $\sigma_\Delta$ are the mean and standard deviation of th
 %     \item \textbf{Population-level:} By aggregating the $\hat{y}_i^{(2)}$ indices across all high-interest samples, we construct a conflict direction matrix. This matrix uncovers systematic confusion patterns (e.g., whether the model consistently confuses "Forest" with "Desert" under distribution shift), providing insights that scalar confidence measures cannot capture.
 % \end{itemize}
 
-\subsubsection{ResNet-50 Reference Statistics}
-While our core method utilizes the angular margin, we maintain the ResNet-50 output certainty as a secondary heuristic. The ResNet-50  confidence $q_i = \max_j\, p_{ij}$ serves as a standard metric to assess model output certainty. However, in our comparative analysis, we show that the geometric signals derived from $\Delta_i$ offer superior sensitivity for identifying samples that the baseline model misclassifies with high confidence—samples that are "hidden" from standard drift detection pipelines.
+\subsubsection{Baseline Confidence: ResNet-50}
+
+For comparative evaluation, we employ the softmax confidence of a standard 
+ResNet-50 as a reference selection signal. The confidence score 
+$q_i = \max_j\, p_{ij}$ is a widely used heuristic for identifying uncertain 
+predictions, and serves here as the representative of standard 
+confidence-based prioritization strategies. In the comparative analysis of 
+Section~\ref{sec:results}, we demonstrate that the angular margin $\Delta_i$ 
+offers substantially higher sensitivity for identifying samples that the 
+baseline model misclassifies with high confidence-instances that are 
+effectively invisible to confidence-based selection yet constitute precisely 
+the ambiguous boundary region where gradual drift manifests.
 
 % \subsection{Drift Detection}
 % \label{sec:detection}
