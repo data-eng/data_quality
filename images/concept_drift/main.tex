@@ -84,7 +84,29 @@
 \cortext[cor1]{Corresponding author}
 
 \begin{abstract}
-  \myabstract
+  \myabstract{%
+  Monitoring machine learning systems for performance-degrading distribution shifts 
+  is crucial. However, getting ground-truth labels for deployment data to evaluate 
+  or re-train the model is costly. We propose a way for selecting the most informative 
+  instances for manual annotation from a pool of unlabeled instances 
+  under a limited labelling budget. Each instance is reduced to a single scalar 
+  score using both a normal ResNet-50 classifier and a Hyperplane-Assisted Softmax
+  (HASeparator) variant of the same architecture: angular margin to the 
+  closest decision boundary for the latter, and softmax confidence for the former. 
+  We utilize a $k$-sigma left-tail cutoff, which is the same in form for both models, 
+  to identify informative instances. We model the training-set distribution of each 
+  score as a Gaussian, defined by its empirical mean and standard deviation. We 
+  verify this process in two complementary contexts. We demonstrate that the HAS 
+  angular-margin score on CIFAR-10N correlates with human-annotator disagreement 
+  far more strongly than the baseline's confidence score, validating it as a 
+  trustworthy, label-free signal of which cases are worth relabeling. We demonstrate 
+  that prioritizing a fixed annotation budget by the HAS margin recovers 
+  target-domain accuracy more effectively than confidence-based or random selection 
+  on a real-world domain-shift task (Landscape Recognition $\to$ ARXPHOTO314), with 
+  the benefit being most noticeable under the tightest budgets. When combined, these 
+  findings suggest the angular margin as a useful signal for selecting which 
+  deployment instances to label next. 
+}
 \end{abstract}
 
 \begin{keyword}
@@ -145,19 +167,32 @@ objects, it is unlikely that a noticeable drift can occur.
 
 \paragraph{Contributions}
 
-We present a methodology for characterizing unlabelled instances as
-exhibiting covariate drift, concept drift, both, or neither and,
-for concept drift in particular,
-for identifying both the direction and the severity of
-the drift. Based on this information, we also present a methodology
-for selecting a small subset of the unlabelled new instances for
-manual annotation, such that fine-tuning on these sub-set
-achieves accuracy on a par with labelling all new instances and
-fine-tuning on the complete new dataset. We envisage that this
-methodology will become an important part of systems for monitroing ML
-systems post-deployment.
-
-
+% We present a methodology for characterizing unlabelled instances as
+% exhibiting covariate drift, concept drift, both, or neither and,
+% for concept drift in particular,
+% for identifying both the direction and the severity of
+% the drift. Based on this information, we also present a methodology
+% for selecting a small subset of the unlabelled new instances for
+% manual annotation, such that fine-tuning on these sub-set
+% achieves accuracy on a par with labelling all new instances and
+% fine-tuning on the complete new dataset. We envisage that this
+% methodology will become an important part of systems for monitroing ML
+% systems post-deployment.
+We suggest a method for selecting the most informative instances for human 
+annotation within a limited labeling budget from a pool of unlabeled instances 
+gathered after deployment.
+An identical $k$-sigma left-tail cutoff is then applied to both the model under 
+evaluation and its Hyperplane-Assisted Softmax counterpart, reducing both to a 
+single per-instance scalar score whose training-set distribution is modeled as a 
+Gaussian. This ensures that any variation in the outcome reflects the 
+informativeness of the underlying score rather than a difference in the detection 
+mechanism itself.
+We demonstrate that choosing a small fraction of new examples for labeling based 
+on the HAS angular-margin score provides accuracy recovery that exceeds 
+confidence-based or random selection under the same labelling budget, and that 
+this score has a good correlation with true annotation mistake. After deployment, 
+we anticipate that this methodology will be a 
+useful part of systems for giving human annotation effort priority in ML systems.
 
 \section{Background}
 \label{sec:bg}
@@ -178,15 +213,46 @@ systems post-deployment.
 \label{sec:datasets}
 \input{sec_impl}
 
+\section{Training Setup}
+\label{sec:training}
+
+This section provides the optimiser and schedule hyperparameters for the two 
+model architectures outlined in Section~\ref{sec:models}.
+Both tracks below train the same architectures from scratch on their respective 
+source datasets (Section~\ref{sec:datasets}). Per-instance scoring and selection 
+procedures are only applied to frozen models after training.
+
+
+\textbf{Landscape Recognition/ARXPHOTO314 Track.} The models are trained using 
+SGD (momentum $\gamma = 0.9$, weight decay $\lambda = 10^{-4}$) and a multi-step 
+learning-rate schedule that decays by a factor of 10 at 60\% and 80\% of training 
+($T = 150$ epochs). The baseline employs an initial learning rate of $\eta_0 = 0.1$, 
+whereas the HAS model utilizes a lower rate of $\eta_0 = 0.05$ to prevent early 
+geometric collapse due to the angular penalty. The parameters are $\alpha = 1.0$, 
+$\beta = 0.5$, margin $m = 0.3$, and scale $\sigma = 8.0$. Both use a batch size 
+of 64. Training augmentation includes random cropping to $224\times224$, horizontal 
+flipping, and color jitter ($\pm0.2$ brightness/contrast). Evaluation 
+and feature extraction utilize a deterministic resize-and-normalize transform.
+
+\textbf{CIFAR-10N Track.} Both models are trained using SGD (momentum $0.9$, 
+Nesterov, weight decay $10^{-4}$) with the identical multi-step schedule 
+(decay by 10 at 60\% and 80\% of training), with $T = 100$ epochs and batch size 128. 
+The baseline uses $\eta_0 = 0.1$, whereas the HAS model employs $\eta_0 = 0.05$, 
+angular margin $m = 1.0$, and scale $\sigma = 3.0$ (the configuration published 
+for ResNet-50 on CIFAR-10 in the original HASeparator article), with a 5-epoch 
+linear warm-up of $\beta$ (Equation~\ref{eq:warmup}).
+
+After training, the models are frozen and employed in inference to compute 
+Section~\ref{sec:scoring} scores for each instance in the training set and 
+evaluation pool. In the HAS model, the embedding $\hat{e}_i \in \mathcal{S}^{63}$ 
+represents the $\ell_2$-normalized bottleneck output. Baseline embeddings do not 
+have this requirement and are only utilized to compute $q_i$, not the geometric 
+score.
 
 \section{Results and Discussion}
 \label{sec:results}
 \input{sec_results}
 
-
-by comparison to baseline (original embedding): overlap, accuracy
-
-by comparison to labelling everything: accuracy
 
 
 
