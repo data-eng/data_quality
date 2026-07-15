@@ -111,7 +111,7 @@ validating H1 in isolation.
 
 Table~\ref{tab:cifar_sensitivity} reports the fraction of each
 human-agreement stratum flagged as informative at the standard operating
-point $k=2$ (Section~\ref{sec:margin}, use (i)).
+point $k=2$ in Equation~\ref{eq:thresh}.
 
 \begin{table}[h]
     \centering
@@ -129,15 +129,20 @@ point $k=2$ (Section~\ref{sec:margin}, use (i)).
     \end{tabular}
 \end{table}
 
-As human-annotator disagreement increases from 0/3 to 3/3, the HAS-margin flag rate rises from $2.56\%$ to $10.22\%$ (a $7.66$ percentage-point
-increase), compared to $0.64\%$ to $3.19\%$ for the confidence baseline (a $2.55$ point increase). At total disagreement (3/3), HAS flags
+As human-annotator disagreement increases from 0/3 to 3/3, the HAS-margin flag 
+rate rises from $2.56\%$ to $10.22\%$ (a $7.66$ percentage-point
+increase), compared to $0.64\%$ to $3.19\%$ for the confidence baseline 
+(a $2.55$ point increase). At total disagreement (3/3), HAS flags
 samples at $3.2\times$ the baseline rate. This confirms that the angular
 margin is a substantially more sensitive, label-free indicator of
 genuine annotation difficulty than softmax confidence.
 
-Even within this same-image setting, the two scores disagree substantially at the instance level: $1{,}457$ images ($2.9\%$ of the
-pool) are flagged as informative by the HAS-margin score while the model remains highly confident on them under the baseline score. These
-are precisely the images a confidence-based selection strategy would fail to prioritize for relabelling: the model is not visibly uncertain
+Even within this same-image setting, the two scores disagree substantially 
+at the instance level: $1{,}457$ images ($2.9\%$ of the
+pool) are flagged as informative by the HAS-margin score while the model 
+remains highly confident on them under the baseline score. These
+are precisely the images a confidence-based selection strategy would fail 
+to prioritize for relabelling: the model is not visibly uncertain
 about them, yet their embeddings sit close to a decision boundary.
 
 
