@@ -84,7 +84,7 @@
 \cortext[cor1]{Corresponding author}
 
 \begin{abstract}
-  \myabstract{%
+  \myabstract{
   Monitoring machine learning systems for performance-degrading distribution shifts 
   is crucial. However, getting ground-truth labels for deployment data to evaluate 
   or re-train the model is costly. We propose a way for selecting the most informative 
@@ -110,7 +110,7 @@
 \end{abstract}
 
 \begin{keyword}
-Concept drift \sep Active Learning \sep Representation Learning
+Drift \sep Active Learning \sep Representation Learning
 \end{keyword}
 
 \end{frontmatter}
@@ -259,9 +259,17 @@ score.
 \section{Conclusions}
 \label{sec:outro}
 
-Great results, future work
-
-
+We presented a methodology for identifying, among a pool of unlabelled
+deployment instances, those most informative for manual annotation under
+a constrained labelling budget.The baseline and HAS models are simplified 
+to a single scalar score, modelled as a Gaussian over the training set, 
+and thresholded by a same $k$-sigma rule. 
+On CIFAR-10N, the HAS angular margin correlates with human-annotator 
+disagreement more strongly than baseline confidence (H1). 
+In a real-world domain-shift task, ranking annotation budget by HAS margin 
+improves target-domain accuracy more effectively than 
+similar selection from the Baseline's same unlabeled pool, especially with 
+limited budgets (H2).
 \bibliographystyle{elsarticle-num}
 \bibliography{../biblio}
 
