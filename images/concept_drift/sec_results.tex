@@ -146,52 +146,52 @@ to prioritize for relabelling: the model is not visibly uncertain
 about them, yet their embeddings sit close to a decision boundary.
 
 
-\subsection{Concept Drift Direction Analysis}
+\subsection{Fine-Tuning Results (Landscape $\to$ ARXPHOTO314)}
 \label{sec:res_direction}
 
 
-Table~\ref{tab:direction} reports the concept drift direction matrix for HAS-margin concept-drifted samples, showing the percentage of each true class that drifts
-toward each runner-up class.
+% Table~\ref{tab:direction} reports the concept drift direction matrix for HAS-margin concept-drifted samples, showing the percentage of each true class that drifts
+% toward each runner-up class.
 
-\begin{table}[htbp]
-\centering
-\caption{Concept drift direction matrix (\%). Each row shows, for concept-drifted samples of a given true class, the percentage drifting toward each runner-up class. Diagonal entries indicate
-self-directed drift (correctly predicted but boundary-proximate). Dominant off-diagonal entries are in \textbf{bold}.}
-\label{tab:direction}
-\renewcommand{\arraystretch}{1.3}
-\begin{tabular}{@{} l r r r r r @{}}
-\toprule
-\textbf{True class} & \textbf{Coast} & \textbf{Desert} & \textbf{Forest} & \textbf{Glacier} & \textbf{Mountain} \\
-\midrule
-Coast   & 27.0 & \textbf{26.4} &  8.8 & 15.7 & 22.0 \\
-Desert  & \textbf{28.3} & 22.8 & 11.8 &  9.4 & 27.6 \\
-Forest  & 12.9 & 16.9 & 24.2 &  2.4 & \textbf{43.5} \\
-Glacier & 18.5 & 10.8 & 15.3 & 26.6 & \textbf{28.8} \\
-Mountain & 15.6 & \textbf{28.5} &  9.1 & 24.7 & 22.0 \\
-\bottomrule
-\end{tabular}
-\end{table}
+% \begin{table}[htbp]
+% \centering
+% \caption{Concept drift direction matrix (\%). Each row shows, for concept-drifted samples of a given true class, the percentage drifting toward each runner-up class. Diagonal entries indicate
+% self-directed drift (correctly predicted but boundary-proximate). Dominant off-diagonal entries are in \textbf{bold}.}
+% \label{tab:direction}
+% \renewcommand{\arraystretch}{1.3}
+% \begin{tabular}{@{} l r r r r r @{}}
+% \toprule
+% \textbf{True class} & \textbf{Coast} & \textbf{Desert} & \textbf{Forest} & \textbf{Glacier} & \textbf{Mountain} \\
+% \midrule
+% Coast   & 27.0 & \textbf{26.4} &  8.8 & 15.7 & 22.0 \\
+% Desert  & \textbf{28.3} & 22.8 & 11.8 &  9.4 & 27.6 \\
+% Forest  & 12.9 & 16.9 & 24.2 &  2.4 & \textbf{43.5} \\
+% Glacier & 18.5 & 10.8 & 15.3 & 26.6 & \textbf{28.8} \\
+% Mountain & 15.6 & \textbf{28.5} &  9.1 & 24.7 & 22.0 \\
+% \bottomrule
+% \end{tabular}
+% \end{table}
 
-By observing Table~\ref{tab:direction} the most dominant drift direction is Forest toward Mountain, with $43.5\%$ of concept-drifted Forest samples exhibiting closest-boundary alignment with the Mountain class.
-Sub-categories such as \emph{Pacific Island Forest}, \emph{Olive Tree
-Cluster}, and \emph{Forest Panorama} share visual characteristics such as elevated terrain, and mixed textures, with Mountain sub-categories.
-Subsequently, the second strongest pattern is Glacier toward Mountain ($28.8\%$).
-In the category, sub-categories such as \emph{Ice Skating Rink} and \emph{Athletes on Snow
-\& Ice} lack the natural glacial landscape features that the training set Glacier class exhibits, making Mountain the geometrically nearest alternative boundary.
+% By observing Table~\ref{tab:direction} the most dominant drift direction is Forest toward Mountain, with $43.5\%$ of concept-drifted Forest samples exhibiting closest-boundary alignment with the Mountain class.
+% Sub-categories such as \emph{Pacific Island Forest}, \emph{Olive Tree
+% Cluster}, and \emph{Forest Panorama} share visual characteristics such as elevated terrain, and mixed textures, with Mountain sub-categories.
+% Subsequently, the second strongest pattern is Glacier toward Mountain ($28.8\%$).
+% In the category, sub-categories such as \emph{Ice Skating Rink} and \emph{Athletes on Snow
+% \& Ice} lack the natural glacial landscape features that the training set Glacier class exhibits, making Mountain the geometrically nearest alternative boundary.
 
-Accordingly, a mutual pattern is observed between Coast and Desert, suggesting greater intra-class heterogeneity in the ARXPHOTO314 categories compared to the training dataset.
+% Accordingly, a mutual pattern is observed between Coast and Desert, suggesting greater intra-class heterogeneity in the ARXPHOTO314 categories compared to the training dataset.
 
-These directional patterns are entirely inaccessible to the baseline model, which produces only a scalar confidence value and cannot identify which decision boundary is being approached.
-
-
+% These directional patterns are entirely inaccessible to the baseline model, which produces only a scalar confidence value and cannot identify which decision boundary is being approached.
 
 
-\subsection{Fine-Tuning Results}
-\label{sec:res_finetune}
 
-The data in Figure~\ref{fig:learning_curve} shows the classification accuracy on the test set as a function of annotation budget $N$ for both the HAS and baseline models, fine-tuned using
-their respective drift-aware selection strategies.
 
+
+Figure~\ref{fig:learning_curve} shows test-set accuracy as a function of
+annotation budget $N$ for both models, each fine-tuned on an $N$-instance
+subset selected as described in Section~\ref{sec:selection}: HAS selects
+its subset by ranking the margin-flagged pool, while the Baseline draws
+its subset uniformly at its own margin-flagged pool.
 
 \begin{figure}[ht]
     \centering
@@ -200,22 +200,47 @@ their respective drift-aware selection strategies.
     \label{fig:learning_curve}
 \end{figure}
 
-The HAS model consistently outperforms the baseline across all tested budget levels ($N = 100$ to $N = 300$), with accuracy ranging from $58.3\%$ to $62.0\%$ for HAS and from $56.6\%$ to $61.5\%$ for the baseline.
-Consistent with our initial hypothesis, the data demonstrate that the performance advantage of HAS is largest at small budgets.
-At $N = 200$, the gap reaches $3.42$ percentage points ($61.4\%$ vs $57.9\%$), validating our hypothesis that targeted margin-based sample prioritisation is particularly valuable when annotation resources are scarce. As the budget grows toward $N = 300$, the gap narrows to $0.49$ percentage points, consistent with the expectation that at large budgets random selection eventually covers the most informative samples as well but also this further highlight that the severity drifted intances of the HAS methodology are better captured.
+The HAS model consistently outperforms the baseline across all tested budget 
+levels ($N = 100$ to $N = 300$), with accuracy ranging from $58.3\%$ to $62.0\%$ 
+for HAS and from $56.6\%$ to $61.5\%$ for the baseline.
+Consistent with our initial hypothesis, the data demonstrate that the performance 
+advantage of HAS is largest at small budgets.
+At $N = 200$, the gap reaches $3.42$ percentage points ($61.4\%$ vs $57.9\%$), 
+validating our hypothesis that targeted margin-based sample prioritisation is 
+particularly valuable when annotation resources are scarce. As the budget grows 
+toward $N = 300$, the gap narrows to $0.49$ percentage points, consistent with 
+the expectation that at large budgets Baseline's selection eventually covers the most 
+informative samples as well but also this further highlight that the severity 
+drifted intances of the HAS methodology are better captured.
 
 
 This convergence behaviour is corroborated by the
 critical samples overlap column.
 At $N = 100$, only $7$ instances are shared between the HAS and baseline selections,
-confirming that the two strategies identify largely disjoint subsets at small budgets. At $N = 300$, the overlap grows to $48$ samples, reflecting the gradual convergence of the two selection sets as the budget approaches full pool coverage. Together, these results support hypothesis H2.
-Thus, prioritising samples by their angular margin in HAS space yields systematically better
-fine-tuning outcomes than random selection, with the benefit being most pronounced precisely when the annotation budget is most constrained.
-Last but not least, we can observe that the HAS's accuracy is smoothly imporved but adding more critical instances in the fine-tuning pool. One the other hand the Baselines behavior does not follow a same smooth improvement behavior with spikes in accuracy at $120, 200, 240$ instances.
-This further highlight that the severity drifted intances of the HAS methodology better captured.
+confirming that the two strategies identify largely disjoint subsets at small 
+budgets. At $N = 300$, the overlap grows to $48$ samples, reflecting the 
+gradual convergence of the two selection sets as the budget approaches full 
+pool coverage. Together, these results support hypothesis H2. 
+Thus, prioritising samples by their angular margin in HAS space yields 
+systematically better 
+fine-tuning outcomes than Baseline's space, with the benefit being most pronounced 
+precisely when the annotation budget is most constrained.
+Last but not least, we can observe that the HAS's accuracy is smoothly imporved 
+but adding more critical instances in the fine-tuning pool. One the other hand 
+the Baseline's behavior does not follow a same smooth improvement behavior with 
+spikes in accuracy at $120, 200, 240$ instances.
+This further highlight that the severity drifted intances of the HAS methodology 
+better captured.
 
+Lastly, in Figure~\ref{fig:same_instances} we show that the critical instances 
+selected by HAS and Baseline are largely disjoint, with only $7$ shared instances 
+at $N = 100$ and $48$ at $N = 300$. This further supports the conclusion that HAS 
+identifies a more informative subset of samples for fine-tuning under limited 
+annotation budgets.
 
-Beyond the initial observations, we also explored the nature of concept drift in the fine-tuning set, Table~\ref{tab:top50_severity} reports summary statistics for the top severity $50$ samples assigned the highest concept drift severity by the baseline model (lowest prediction confidence).
-
-
-TODO: ADD the severity table to compare baseline - has classed, true-false,
+\begin{figure}[ht]
+    \centering
+    \resizebox{0.8\textwidth}{!}{\input{../../results/learning_curve_study/instances.pgf}}
+    \caption{Instances selected by HAS and Baseline.}
+    \label{fig:same_instances}
+\end{figure}
