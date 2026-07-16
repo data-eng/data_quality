@@ -43,9 +43,29 @@
   \\ Ag. Paraskevi, Greece}
 
 \def\myabstract{%
-  This is the abstract.
+  Monitoring machine learning systems for performance-degrading distribution shifts 
+  is crucial. However, getting ground-truth labels for deployment data to evaluate 
+  or re-train the model is costly. We propose a way for selecting the most informative 
+  instances for manual annotation from a pool of unlabeled instances 
+  under a limited labelling budget. Each instance is reduced to a single scalar 
+  score using both a normal ResNet-50 classifier and a Hyperplane-Assisted Softmax
+  (HASeparator) variant of the same architecture: angular margin to the 
+  closest decision boundary for the latter, and softmax confidence for the former. 
+  We utilize a $k$-sigma left-tail cutoff, which is the same in form for both models, 
+  to identify informative instances. We model the training-set distribution of each 
+  score as a Gaussian, defined by its empirical mean and standard deviation. We 
+  verify this process in two complementary contexts.
 
-  It can have paragraphs.
+  We demonstrate that the HAS 
+  angular-margin score on CIFAR-10N correlates with human-annotator disagreement 
+  far more strongly than the baseline's confidence score, validating it as a 
+  trustworthy, label-free signal of which cases are worth relabeling. We demonstrate 
+  that prioritizing a fixed annotation budget by the HAS margin recovers 
+  target-domain accuracy more effectively than confidence-based or random selection 
+  on a real-world domain-shift task (Landscape Recognition $\to$ ARXPHOTO314), with 
+  the benefit being most noticeable under the tightest budgets. When combined, these 
+  findings suggest the angular margin as a useful signal for selecting which 
+  deployment instances to label next. 
 }
 
 
@@ -84,29 +104,7 @@
 \cortext[cor1]{Corresponding author}
 
 \begin{abstract}
-  \myabstract{
-  Monitoring machine learning systems for performance-degrading distribution shifts 
-  is crucial. However, getting ground-truth labels for deployment data to evaluate 
-  or re-train the model is costly. We propose a way for selecting the most informative 
-  instances for manual annotation from a pool of unlabeled instances 
-  under a limited labelling budget. Each instance is reduced to a single scalar 
-  score using both a normal ResNet-50 classifier and a Hyperplane-Assisted Softmax
-  (HASeparator) variant of the same architecture: angular margin to the 
-  closest decision boundary for the latter, and softmax confidence for the former. 
-  We utilize a $k$-sigma left-tail cutoff, which is the same in form for both models, 
-  to identify informative instances. We model the training-set distribution of each 
-  score as a Gaussian, defined by its empirical mean and standard deviation. We 
-  verify this process in two complementary contexts. We demonstrate that the HAS 
-  angular-margin score on CIFAR-10N correlates with human-annotator disagreement 
-  far more strongly than the baseline's confidence score, validating it as a 
-  trustworthy, label-free signal of which cases are worth relabeling. We demonstrate 
-  that prioritizing a fixed annotation budget by the HAS margin recovers 
-  target-domain accuracy more effectively than confidence-based or random selection 
-  on a real-world domain-shift task (Landscape Recognition $\to$ ARXPHOTO314), with 
-  the benefit being most noticeable under the tightest budgets. When combined, these 
-  findings suggest the angular margin as a useful signal for selecting which 
-  deployment instances to label next. 
-}
+  \myabstract
 \end{abstract}
 
 \begin{keyword}
@@ -152,7 +150,7 @@ labelling necessary in order to re-train or fine-tune the system.
 In order maximally economize on labelling effort, it makes sense to be
 able to extract as much information as possible from the
 \emph{unlabelled} deployment data, and use this information to
-pin-point the instances that would have the impact on model accuracy.
+pin-point the instances that would have the most impact on model accuracy.
 
 
 Tran et al. \cite{tran-etal:2026}: concept drift either synthetically
@@ -178,7 +176,7 @@ objects, it is unlikely that a noticeable drift can occur.
 % fine-tuning on the complete new dataset. We envisage that this
 % methodology will become an important part of systems for monitroing ML
 % systems post-deployment.
-We suggest a method for selecting the most informative instances for human 
+We propose a method for selecting the most informative instances for human 
 annotation within a limited labeling budget from a pool of unlabeled instances 
 gathered after deployment.
 An identical $k$-sigma left-tail cutoff is then applied to both the model under 
