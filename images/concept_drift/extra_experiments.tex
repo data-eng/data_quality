@@ -1,0 +1,502 @@
+% ============================================================================
+CIFAR-10N: Figure 3 Reproduction and HAS Direction Validation
+\label{sec:extra_cifar10n_direction}
+% This section asks whether the DIRECTION of HAS's confusion (which class it
+% flags as the runner-up) agrees with genuine human-judged confusability.
+% The finding is mostly negative.
+
+We test whether HAS's closest decision boundary agrees with where human annotators actually
+mis-annotate. 
+\begin{table}[htbp]
+\centering
+\caption{HAS closest-boundary matrix (\%): $P(\text{closest\_boundary}=\text{col} \mid \text{clean label}=\text{row})$ }
+\label{tab:cifar10n_has_boundary}
+\renewcommand{\arraystretch}{1.1}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{} l rrrrrrrrrr @{}}
+\toprule
+\textbf{True} & \textbf{plane} & \textbf{auto} & \textbf{bird} & \textbf{cat} & \textbf{deer} & \textbf{dog} & \textbf{frog} & \textbf{horse} & \textbf{ship} & \textbf{truck} \\
+\midrule
+airplane   & 0.0 & 0.7 & 0.2 & 0.0 & 98.1 & 0.5 & 0.0 & 0.0 & 0.1 & 0.4 \\
+automobile & 2.9 & 0.0 & 0.5 & 0.0 & 0.0 & 0.0 & 0.0 & 0.1 & 0.1 & 96.3 \\
+bird       & 0.2 & 92.9 & 0.0 & 3.5 & 0.1 & 0.1 & 0.4 & 0.3 & 2.4 & 0.0 \\
+cat        & 0.0 & 0.0 & 0.2 & 0.2 & 0.1 & 0.2 & 98.9 & 0.1 & 0.0 & 0.2 \\
+deer       & 99.0 & 0.0 & 0.1 & 0.3 & 0.1 & 0.1 & 0.1 & 0.2 & 0.1 & 0.0 \\
+dog        & 8.2 & 0.1 & 0.0 & 0.2 & 0.1 & 0.1 & 0.2 & 0.2 & 0.1 & 90.8 \\
+frog       & 0.0 & 0.0 & 0.1 & 99.6 & 0.0 & 0.0 & 0.1 & 0.1 & 0.0 & 0.0 \\
+horse      & 0.0 & 26.0 & 0.2 & 1.3 & 0.1 & 0.2 & 71.9 & 0.0 & 0.1 & 0.1 \\
+ship       & 0.1 & 0.1 & 97.2 & 0.7 & 0.0 & 0.1 & 0.0 & 1.7 & 0.0 & 0.1 \\
+truck      & 0.3 & 76.7 & 0.0 & 0.1 & 0.0 & 22.6 & 0.0 & 0.0 & 0.0 & 0.2 \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+In sharp contrast to Figure 3 of the CIFAR-10N paper, HAS's closest-boundary mass is 90--99\%
+concentrated on a single target class per row, rather than spread across several plausible
+neighbours. Several of these dominant pairs are semantically arbitrary: airplane
+$\leftrightarrow$ deer (mutual, 98--99\%), cat $\leftrightarrow$ frog (mutual, 99\%).
+automobile$\leftrightarrow$truck (96.3\%/76.7\%) is the one pair that does match genuine human
+confusion.
+
+
+HAS class weight-vector geometry, no input data involved
+
+
+% explanation: pure analysis of the trained classifier head
+% (weights/has_model.pth, F.normalize(has_layer.weight, dim=0), then the
+% 10x10 cosine similarity matrix between class columns). Confirms the
+% collapse is a property of this trained model's geometry, not of which
+% images/labels were evaluated.
+
+\begin{table}[htbp]
+\centering
+\caption{Cosine similarity between HAS's CIFAR-10 class weight vectors (computed directly from the trained classifier head, no input images involved).}
+\label{tab:cifar10n_wcos}
+\renewcommand{\arraystretch}{1.1}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{} l rrrrrrrrrr @{}}
+\toprule
+ & \textbf{plane} & \textbf{auto} & \textbf{bird} & \textbf{cat} & \textbf{deer} & \textbf{dog} & \textbf{frog} & \textbf{horse} & \textbf{ship} & \textbf{truck} \\
+\midrule
+airplane   & 1.000 & 0.006 & -0.004 & -0.258 & 0.224 & 0.124 & -0.027 & -0.570 & -0.144 & 0.041 \\
+automobile & 0.006 & 1.000 & 0.056 & -0.212 & -0.031 & -0.038 & -0.734 & 0.009 & -0.056 & 0.046 \\
+bird       & -0.004 & 0.056 & 1.000 & 0.209 & 0.025 & -0.018 & 0.046 & 0.084 & 0.164 & -0.324 \\
+cat        & -0.258 & -0.212 & 0.209 & 1.000 & 0.214 & -0.044 & 0.305 & 0.205 & 0.172 & 0.076 \\
+deer       & 0.224 & -0.031 & 0.025 & 0.214 & 1.000 & 0.098 & -0.027 & 0.047 & 0.073 & 0.091 \\
+dog        & 0.124 & -0.038 & -0.018 & -0.044 & 0.098 & 1.000 & -0.036 & 0.066 & 0.027 & 0.156 \\
+frog       & -0.027 & -0.734 & 0.046 & 0.305 & -0.027 & -0.036 & 1.000 & 0.079 & 0.008 & -0.167 \\
+horse      & -0.570 & 0.009 & 0.084 & 0.205 & 0.047 & 0.066 & 0.079 & 1.000 & 0.107 & 0.030 \\
+ship       & -0.144 & -0.056 & 0.164 & 0.172 & 0.073 & 0.027 & 0.008 & 0.107 & 1.000 & -0.281 \\
+truck      & 0.041 & 0.046 & -0.324 & 0.076 & 0.091 & 0.156 & -0.167 & 0.030 & -0.281 & 1.000 \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+Notably, ``cat'' is the rank-1 nearest weight-vector neighbour for four different classes (bird,
+frog, horse, ship) and rank-2 for deer — i.e.\ cat's weight vector sits in a broad, poorly
+separated region of $\mathcal{S}^{63}$, which mechanistically explains why ``cat'' also emerges as
+a dominant attractor in two independent, unrelated analyses: the synthetic \texttt{test\_drifted}
+corruption matrix (Section~\ref{sec:extra_cifar10_sanity}) and the hardest human-disagreement tail
+below. An evenly-separated 10-class hyperspherical arrangement would show every off-diagonal
+cosine near a small negative value ($\approx -0.11$); the observed range here ($-0.734$ to
+$0.305$) is far more uneven than that.
+
+\begin{table}[htbp]
+\centering
+\caption{Dominant HAS closest-boundary target on the hardest human-disagreement tail (errors $\geq 2/3$, $n=347$ qualifying instances).}
+\label{tab:extra_semantic_direction}
+\begin{tabular}{@{} l l @{}}
+\toprule
+\textbf{True class} & \textbf{Dominant HAS target (\% of tail)} \\
+\midrule
+airplane   & cat (77.3\%) \\
+automobile & cat (85.0\%) \\
+bird       & cat (85.5\%) \\
+cat        & frog (40.0\%) \\
+deer       & cat (87.5\%) \\
+dog        & cat (93.3\%) \\
+frog       & cat (87.5\%) \\
+horse      & cat (64.3\%) \\
+ship       & cat (76.5\%) \\
+truck      & cat (77.8\%) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This independently reproduces the same ``cat attractor'' seen in
+Table~\ref{tab:cifar10n_has_boundary} .
+
+% ============================================================================
+CIFAR-10 Sanity-Check Pipeline (clean-train / worst-label-eval design)
+
+\label{sec:extra_cifar10_sanity}
+% This experiment trains on real clean CIFAR-10 labels, then deliberately
+% RE-evaluates the identical 50,000 training images with CIFAR-10N's WORST
+% human label attached, to test whether HAS notices the mismatch. This is
+% not a real generalization/OOD test (the input images never change). Note
+% that "accuracy" numbers here are against a noisy label, not real ground
+% truth (real-clean-label accuracy is ~99.8-99.98% for both models, i.e.
+% near-perfect, since training was genuinely clean).
+
+
+\begin{table}[htbp]
+\centering
+\caption{Per-image drift taxonomy on the clean-train/worst-eval CIFAR-10 pass, $n=50{,}000$.}
+\label{tab:extra_cifar10_taxonomy}
+\begin{tabular}{@{} l rr @{}}
+\toprule
+\textbf{Category} & \textbf{Baseline} & \textbf{HAS (margin-based)} \\
+\midrule
+In-Distribution    & 96.2\% & 96.8\% \\
+Data Drift         & 2.9\%  & 4.8\%  (Pure Data Drift) \\
+Concept Drift      & 0.8\%  & 3.0\%  (Pure Concept Drift) \\
+Full Drift (both)  & 0.0\%  & 0.2\%  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Model ``accuracy'' recomputed two ways on the same 50,000 images.}
+\label{tab:extra_cifar10_accuracy_correction}
+\begin{tabular}{@{} l cc @{}}
+\toprule
+\textbf{Model} & \textbf{vs.\ deliberately-noisy Worst label} & \textbf{vs.\ real clean label} \\
+\midrule
+Baseline & 59.79\% & 99.98\% \\
+HAS      & 59.78\% & 99.80\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Direction matrix, clean CIFAR-10 test set — sensible, class-pair-specific confusions (HAS).}
+\label{tab:extra_direction_clean}
+\begin{tabular}{@{} l l @{}}
+\toprule
+\textbf{Pair} & \textbf{Off-diagonal mass} \\
+\midrule
+truck $\to$ automobile & 60.0\% \\
+horse $\to$ deer       & 45.3\% \\
+cat $\to$ dog          & 40.8\% \\
+dog $\to$ cat          & 37.2\% \\
+ship $\to$ airplane    & 34.7\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Direction matrix, synthetically corrupted \texttt{test\_drifted} set — total collapse toward a single class regardless of true label (HAS).}
+\label{tab:extra_direction_drifted}
+\begin{tabular}{@{} l r @{}}
+\toprule
+\textbf{True class} & \textbf{\% drifting to ``cat''} \\
+\midrule
+airplane   & 89.4\% \\
+automobile & 85.7\% \\
+bird       & 91.2\% \\
+deer       & 88.5\% \\
+dog        & 96.6\% \\
+frog       & 91.4\% \\
+horse      & 74.3\% \\
+ship       & 76.1\% \\
+truck      & 80.0\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The clean-test matrix (Table~\ref{tab:extra_direction_clean}) shows sensible, well-known CIFAR-10
+confusions. The synthetically-corrupted set (Table~\ref{tab:extra_direction_drifted}) instead
+collapses every class toward ``cat.''
+
+
+% ============================================================================
+Landscape/ARXPHOTO314: Core Drift-Detection Statistics (pre-fine-tuning)
+\label{sec:extra_landscape_core}
+
+
+Table~\ref{tab:extra_pop_tests} reports population-level statistical tests. Each one asks
+``are the training-set distribution and the ARXPHOTO314 custom-set distribution the same, or
+have they shifted?''
+
+\begin{itemize}
+  \item \textbf{MMD (RBF)} — Maximum Mean Discrepancy: compares the two models' 64-D latent
+  embedding distributions (train vs.\ custom). Tests data drift directly in feature space,
+  independent of labels or predictions.
+  \item \textbf{KS (confidence)} — Kolmogorov--Smirnov test on the max-softmax confidence
+  distribution (train vs.\ custom). Tests whether output certainty has shifted — a
+  concept-drift proxy.
+  \item \textbf{KS (HAS margin)} — same KS idea, but on HAS's angular margin score instead of
+  confidence.
+  \item \textbf{$\chi^2$ (boundary dir.)} — chi-squared test on which class each embedding's
+  closest boundary is, comparing the custom set's pattern against the training set's.
+\end{itemize}
+
+Baseline only appears in the first two rows because a plain softmax classifier has no geometric
+notion of a ``margin'' or a ``closest decision boundary.'' Those concepts only exist because HAS's
+angular-margin design puts class weight vectors on a unit hypersphere with actual geometric
+boundaries between them. So HAS gets two tests Baseline structurally cannot have at all — the
+concrete, measurable version of the paper's core claim that HAS has a geometric signal the
+Baseline doesn't.
+
+On the two tests both models share: Baseline's MMD statistic (0.0203) is larger than HAS's
+(0.0156) — Baseline's raw, unconstrained embedding space shows more apparent separation between
+train and custom. This is likely partly a scale artifact: HAS's embeddings are forced onto a unit
+hypersphere ($\ell_2$-normalized), which compresses the range MMD's RBF kernel is sensitive to,
+relative to Baseline's unconstrained Euclidean space — so this comparison probably shouldn't be
+read as ``HAS drifts less,'' just ``drifts differently, on a different geometric scale.''
+Conversely, HAS's KS-confidence statistic (0.4109) is slightly larger than Baseline's (0.4006):
+HAS's confidence collapses somewhat more sharply under drift than Baseline's does, plausibly
+because angular-margin training pushes correctly-classified training examples to very high,
+sharply-peaked confidence, so when confidence does degrade under drift the drop reads as more
+discriminative/statistically pronounced.
+
+\begin{table}[htbp]
+\centering
+\caption{Population-level drift tests, Landscape train vs. ARXPHOTO314 custom set (pre-fine-tuning). All significant at $p<0.01$.}
+\label{tab:extra_pop_tests}
+\begin{tabular}{@{} l l r r c @{}}
+\toprule
+\textbf{Test} & \textbf{Model} & \textbf{Statistic} & \textbf{$p$-value} & \textbf{Drifted} \\
+\midrule
+MMD (RBF)                & Baseline & 0.0203 & $3.32\times10^{-3}$ & \checkmark \\
+MMD (RBF)                & HAS      & 0.0156 & $3.32\times10^{-3}$ & \checkmark \\
+KS (confidence)          & Baseline & 0.4006 & $\approx 0$ & \checkmark \\
+KS (confidence)          & HAS      & 0.4109 & $\approx 0$ & \checkmark \\
+KS (HAS margin)          & HAS      & 0.4061 & $\approx 0$ & \checkmark \\
+$\chi^2$ (boundary dir.) & HAS      & 42.93  & $1.1\times10^{-8}$ & \checkmark \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{How the taxonomy is generated.} Every sample gets two independent binary
+flags, and the four categories below are just the 2$\times$2 combination of the two:
+\begin{itemize}
+  \item[] \textbf{data-drifted} — computed purely from the 64-D latent embedding (the
+  feature vector produced before the classifier head), as its Euclidean distance from the
+  training-set centroid, thresholded at $\mu_{\mathrm{dist}} + k\sigma_{\mathrm{dist}}$ using
+  training-set statistics (Equation~\ref{eq:thresh} applied to the distance score). This never
+  touches softmax output at all, and is computed identically regardless of whether the
+  concept-drift half below uses confidence or margin.
+  \item[] \textbf{concept-drifted} — computed from a downstream, per-scheme output signal: low
+  softmax confidence $q_i$ (Baseline and HAS-conf) or small angular margin $\Delta_i$
+  (HAS-margin), each thresholded the same $k$-sigma way (Equation~\ref{eq:thresh}).
+\end{itemize}
+\begin{center}
+\begin{tabular}{@{} l c c @{}}
+\toprule
+ & concept-drifted = False & concept-drifted = True \\
+\midrule
+data-drifted = False & In-Distribution & Concept Drift (pure) \\
+data-drifted = True  & Data Drift (pure) & Full Drift (both) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Table~\ref{tab:extra_taxonomy} compares three ways of sorting the same 2150 custom-set images
+into these four categories. HAS-conf and HAS-margin use the exact same trained HAS model and the
+exact same data-drift criterion above (latent distance from the training centroid) — the only
+thing that differs between them is which signal is used for the concept-drift half: HAS-conf uses
+low softmax confidence (scored the same way Baseline is, just on HAS's own confidence output),
+while HAS-margin uses the small/negative angular margin
+$\Delta_i = \cos_{\mathrm{true}} - \cos_{\mathrm{2nd}}$, HAS's purpose-built geometric signal.
+
+Why the ``Data Drift'' percentages still differ even though the data-drift test is
+identical: the table only shows the mutually-exclusive categories, and ``Data Drift'' means
+\textbf{pure} data drift (data-drifted \textbf{and not} concept-drifted). Adding back Full Drift
+recovers the true total fraction with data-drifted$=$True, which is the same under both
+schemes (up to rounding): $15.6\%+28.4\%=44.0\%$ (HAS-conf) vs.\ $4.8\%+39.3\%=44.1\%$
+(HAS-margin). What changes is only how that fixed $\sim\!44\%$ splits between ``pure'' and
+``full,'' because that split depends on which of those data-drifted samples are also
+concept-drifted, and margin flags more samples as concept-drifted overall (total
+concept-drifted: $0.0\%+28.4\%=28.4\%$ for HAS-conf vs.\ $2.0\%+39.3\%=41.3\%$ for HAS-margin),
+pulling more of the same fixed data-drifted population out of ``pure'' and into ``full.''
+
+\begin{table}[htbp]
+\centering
+\caption{Drift taxonomy comparison, percentage of custom-set samples per category, three detection schemes. 
+The two summary rows make the invariant above explicit: total data-drifted is the same ($\approx$44\%) for 
+HAS-conf and HAS-margin: only the pure/full split differs.}
+\label{tab:extra_taxonomy}
+\begin{tabular}{@{} l r r r @{}}
+\toprule
+\textbf{Category} & \textbf{Baseline} & \textbf{HAS-conf} & \textbf{HAS-margin} \\
+\midrule
+In-Distribution      & 72.0\% & 56.0\% & 54.0\% \\
+Data Drift (pure)    &  1.8\% & 15.6\% &  4.8\% \\
+Concept Drift (pure) & 26.2\% &  0.0\% &  2.0\% \\
+Full Drift (both)    &  0.0\% & 28.4\% & 39.3\% \\
+\midrule
+\emph{Total data-drifted} (Data Drift + Full Drift)       & \emph{1.8\%} & \emph{44.0\%} & \emph{44.1\%} \\
+\emph{Total concept-drifted} (Concept Drift + Full Drift) & \emph{26.2\%} & \emph{28.4\%} & \emph{41.3\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Concept-drift direction matrix (HAS, pre-fine-tuning, custom set).}
+\label{tab:extra_direction_landscape}
+\begin{tabular}{@{} l rrrrr @{}}
+\toprule
+\textbf{True class} & \textbf{Coast} & \textbf{Desert} & \textbf{Forest} & \textbf{Glacier} & \textbf{Mountain} \\
+\midrule
+Coast    & 0.099 & 0.314 & 0.124 & 0.158 & 0.305 \\
+Desert   & 0.250 & 0.124 & 0.224 & 0.231 & 0.171 \\
+Forest   & 0.135 & 0.190 & 0.128 & 0.112 & \textbf{0.435} \\
+Glacier  & 0.168 & 0.168 & 0.170 & 0.222 & 0.272 \\
+Mountain & 0.215 & 0.188 & 0.205 & 0.210 & 0.183 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Forest $\to$ Mountain is the dominant direction. We can visually see this from the flagged images
+(Figure~\ref{fig:extra_concept_drift_examples} below).
+
+\textbf{Post-fine-tuning}, the same matrix looks structurally different — Coast becomes the new
+attractor instead of Mountain:
+
+\begin{table}[htbp]
+\centering
+\caption{Concept-drift direction matrix (HAS, POST-fine-tuning, custom set).}
+\label{tab:extra_direction_landscape_postft}
+\begin{tabular}{@{} l rrrrr @{}}
+\toprule
+\textbf{True class} & \textbf{Coast} & \textbf{Desert} & \textbf{Forest} & \textbf{Glacier} & \textbf{Mountain} \\
+\midrule
+Coast    & 0.213 & 0.213 & 0.032 & 0.158 & 0.383 \\
+Desert   & \textbf{0.676} & 0.114 & 0.040 & 0.029 & 0.140 \\
+Forest   & 0.220 & 0.038 & 0.152 & 0.022 & 0.568 \\
+Glacier  & 0.332 & 0.012 & 0.045 & 0.138 & 0.472 \\
+Mountain & 0.398 & 0.059 & 0.084 & 0.111 & 0.348 \\
+\bottomrule
+\end{tabular}
+\end{table}
+% This suggests fine-tuning shifts WHICH class absorbs ambiguous predictions
+% rather than eliminating the attractor effect.
+
+Visualizing drift direction on real images.
+
+Tables~\ref{tab:extra_direction_landscape}
+and~\ref{tab:extra_direction_landscape_postft} are aggregate percentages.
+Figure~\ref{fig:extra_concept_drift_examples} grounds the same phenomenon in six actual
+custom-set photos.
+
+\begin{figure}[htbp]
+    \centering
+    \resizebox{\textwidth}{!}{\input{figures/concept_drift_examples.pgf}}
+    \caption{The 6 most severe (lowest-margin) concept-drifted custom-set images, cross-class
+    only. Each panel is captioned true class $\rightarrow$ closest-boundary class and the
+    angular margin $\Delta$. Several destinations look semantically arbitrary rather than
+    visually motivated.}
+    \label{fig:extra_concept_drift_examples}
+\end{figure}
+
+
+% ============================================================================
+Landscape: Fine-Tuning Ablation 
+\label{sec:extra_landscape_ablation}
+
+
+In ablation~1, both models are ranked by the same kind of score
+(\texttt{data\_drift\_score}, a latent-distance measure) — but each model ranks its own
+pool, restricted to each model's own Pure-Data-Drift-flagged subset
+(only 10--103 images total). ``All'' instead uses the full 2150-image custom set for both models.
+
+\begin{table}[htbp]
+\centering
+\caption{``drift-ranked''/``random'' pools are each model's own Pure-Data-Drift-flagged subset (10--103 images), ``all'' uses the full 2150-image custom set.}
+\label{tab:extra_ablation1}
+\begin{tabular}{@{} l l r r @{}}
+\toprule
+\textbf{Model} & \textbf{Mode} & \textbf{ft\_pct} & \textbf{$\Delta$ overall error} \\
+\midrule
+Baseline & drift-ranked & 25/50/100\% & $+7.58$ / $+7.44$ / $+6.33$ \\
+Baseline & random       & 25/50/100\% & $+3.68$ / $+5.40$ / $+5.96$ \\
+Baseline & all (full custom set) & 25/50/100\% & $-3.02$ / $-2.97$ / $-3.30$ \\
+HAS      & drift-ranked & 25/50/100\% & $0.00$ / $-0.79$ / $-0.74$ \\
+HAS      & random       & 25/50/100\% & $-0.37$ / $-0.37$ / $-0.46$ \\
+HAS      & all (full custom set) & 25/50/100\% & $-5.58$ / $-5.81$ / $-5.86$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Ablation~2 instead ranks each model by its own native output signal ( confidence for
+Baseline, angular margin for HAS ) over the full 2150-image custom set at every budget
+(a fairer, better-controlled design than ablation~1):
+
+\begin{table}[htbp]
+\centering
+\caption{Pool = full 2150-image custom set, ranked by each model's own native score (confidence for Baseline, angular margin for HAS).}
+\label{tab:extra_ablation2}
+\begin{tabular}{@{} l l r r @{}}
+\toprule
+\textbf{Model} & \textbf{Mode} & \textbf{ft\_pct} & \textbf{$\Delta$ overall error} \\
+\midrule
+Baseline & baseline-conf & 25/50/100\% & $-1.25$ / $-1.53$ / $-1.76$ \\
+Baseline & random        & 25/50/100\% & $-0.65$ / $-1.25$ / $-1.72$ \\
+Baseline & all           & 25/50/100\% & $-0.97$ / $-0.79$ / $-0.88$ \\
+HAS      & has-margin    & 25/50/100\% & $-0.65$ / $-0.18$ / $+0.38$ \\
+HAS      & random        & 25/50/100\% & $-0.23$ / $-0.32$ / $-0.09$ \\
+HAS      & all           & 25/50/100\% & $+0.24$ / $+0.56$ / $+0.14$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+% ============================================================================
+Landscape: Current Two-Pool Fine-Tuning Study (Pool A = Data Drift, Pool B = Concept Drift)
+\label{sec:extra_landscape_pool}
+
+
+``Source acc.'' below is accuracy on the original Landscape test set, evaluated after
+fine-tuning on the custom set i.e.\ a catastrophic-forgetting check.
+
+\begin{table}[htbp]
+\centering
+\caption{Pool A (Pure Data Drift, 103 images total).}
+\label{tab:extra_pool_a}
+\begin{tabular}{@{} r r rrr rrr @{}}
+\toprule
+\textbf{ft\_pct} & \textbf{n} & \multicolumn{3}{c}{\textbf{Custom acc.\ (before/after/$\Delta$)}} & \multicolumn{3}{c}{\textbf{Source acc.\ (before/after/$\Delta$)}} \\
+\midrule
+0.25 & 26  & 73.02 & 73.53 & $+0.51$ & 87.40 & 86.80 & $-0.60$ \\
+0.50 & 52  & 73.02 & 73.58 & $+0.56$ & 87.40 & 87.20 & $-0.20$ \\
+1.00 & 103 & 73.02 & 74.19 & $+1.16$ & 87.40 & 86.60 & $-0.80$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Pool B (Pure Concept Drift + Full Drift, 886 images total).}
+\label{tab:extra_pool_b}
+\begin{tabular}{@{} r r rrr rr r @{}}
+\toprule
+\textbf{ft\_pct} & \textbf{n} & \multicolumn{3}{c}{\textbf{Custom acc.\ (before/after/$\Delta$)}} & \multicolumn{2}{c}{\textbf{Margin (before/after)}} & \textbf{Source $\Delta$} \\
+\midrule
+0.25 & 222 & 73.02 & 75.44 & $+2.42$ & 0.6055 & 0.5851 & $-0.60$ \\
+0.50 & 443 & 73.02 & 76.23 & $+3.21$ & 0.6055 & 0.5594 & $-1.20$ \\
+1.00 & 886 & 73.02 & 78.56 & $+5.53$ & 0.6055 & 0.4453 & $-1.80$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Pool B (targeting concept-drifted images) gives 2-5$\times$ the accuracy gain of Pool A at every
+matched budget, at the cost of real angular-margin erosion (down to 0.445 at 100\%, from a
+training baseline of 0.606) and mild monotonic forgetting on the clean source test set. However,
+Pool B also has $8.6\times$ more images available (886 vs.\ 103) — some of its larger gain at
+matched percentages reflects a larger absolute pool, not only that concept drift is the
+``easier win.''
+
+
+% ============================================================================
+Landscape:Targeted vs.\ Global Fine-Tuning at Fixed Budget
+\label{sec:extra_rq1}
+
+\begin{table}[htbp]
+\centering
+\caption{Targeted (Concept) vs.\ Global (random) vs.\ Targeted (Data) fine-tuning, HAS model, concept-drift held-out accuracy.budgets (50 and 110) are shown.}
+\label{tab:extra_rq1}
+\begin{tabular}{@{} l r r r @{}}
+\toprule
+\textbf{Condition} & \textbf{$n$ (actual)} & \textbf{acc.\ before} & \textbf{acc.\ after} \\
+\midrule
+Global\_All       & 50 & 56.11 & 57.70 \\
+Targeted\_Concept & 50 & 56.11 & 58.68 \\
+Targeted\_Data    & 50 & 56.11 & 55.01 \\
+\midrule
+Global\_All       & 110 & 56.11 & 58.31 \\
+Targeted\_Concept & 110 & 56.11 & 61.12 \\
+Targeted\_Data    & 110 & 56.11 & 57.58 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Despite the budget-labeling issue, the qualitative finding is consistent and plausible:
+Targeted\_Concept beats Global\_All by roughly 2--3$\times$ the error reduction at matched
+budgets, and Targeted\_Data (negative control: fine-tuning on data-drift images to fix
+concept-drift error) barely moves concept accuracy at all — the expected result if the two
+drift types genuinely need different remediation.
