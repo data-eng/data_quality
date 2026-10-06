@@ -1,4 +1,4 @@
-In this section we present the results that validate our hypothesis described in Section~\ref{sec:method}.
+In this section we present the results that test hypotheses H1 and H2 (Section~\ref{sec:method}).
 % Thus, Section~\ref{sec:drift_analysis} presentes the drift detection results as well as the identification of the drift type results for the baseline compared to the HAS method.
 % Section~\ref{sec:res_direction} presented the results of the drift directions, namely the asnwer to the \emph{toward which class} question we set at the methodology section.
 % Lastly, Section~\ref{sec:res_finetune} confirm the Hypothesis formed in Section~\ref{}.
@@ -115,16 +115,22 @@ point $k=2$ in Equation~\ref{eq:thresh}.
 
 \begin{table}[h]
     \centering
-    \caption{Fraction of each human-agreement stratum flagged as informative ($k=2$).}
+    \caption{Fraction of each human-agreement stratum flagged as informative
+    ($k=2$), with the number of flagged images in parentheses. The last two
+    rows give the total number flagged and the share of flagged images on which
+    at least two of the three annotators were wrong.}
     \label{tab:cifar_sensitivity}
     \begin{tabular}{cccc}
         \toprule
         \textbf{Humans Wrong} & \textbf{Total} & \textbf{Baseline (\%)} & \textbf{HAS (\%)} \\
         \midrule
-        0/3 & 29{,}896 & 0.64 & 2.56 \\
-        1/3 & 14{,}777 & 0.91 & 3.40 \\
-        2/3 &  4{,}260 & 1.50 & 5.59 \\
-        3/3 &  1{,}067 & 3.19 & 10.22 \\
+        0/3 & 29{,}896 & 0.64 \,(191) & 2.56 \,(765) \\
+        1/3 & 14{,}777 & 0.91 \,(134) & 3.40 \,(502) \\
+        2/3 &  4{,}260 & 1.50 \,(64)  & 5.59 \,(238) \\
+        3/3 &  1{,}067 & 3.19 \,(34)  & 10.22 \,(109) \\
+        \midrule
+        \multicolumn{2}{l}{Total flagged} & 424 & 1{,}615 \\
+        \multicolumn{2}{l}{Flagged with $\geq$2/3 wrong} & 23.1\% & 21.5\% \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -133,9 +139,18 @@ As human-annotator disagreement increases from 0/3 to 3/3, the HAS-margin flag
 rate rises from $2.56\%$ to $10.22\%$ (a $7.66$ percentage-point
 increase), compared to $0.64\%$ to $3.19\%$ for the confidence baseline 
 (a $2.55$ point increase). At total disagreement (3/3), HAS flags
-samples at $3.2\times$ the baseline rate. This confirms that the angular
-margin is a substantially more sensitive, label-free indicator of
-genuine annotation difficulty than softmax confidence.
+samples at $3.2\times$ the baseline rate. Both scores therefore become
+lower as images become harder for humans, but the same rule turns them into
+very different selections. Applied to softmax confidence, which is bounded and
+concentrated near one on the training set, the $k$-sigma cutoff flags only
+$424$ images ($0.8\%$); applied to the HAS margin, it flags $1{,}615$
+($3.2\%$). The extra images are not random: the share of flagged images on
+which at least two annotators were wrong is essentially the same for both
+scores ($21.5\%$ for HAS, $23.1\%$ for the Baseline), while HAS recovers more
+than three times as many of the hardest images ($109$ against $34$ of the
+$1{,}067$ images that all three annotators got wrong). In other words, at
+comparable precision the margin places a much larger part of the
+human-hard tail where a label-free rule can find it, which supports H1.
 
 Even within this same-image setting, the two scores disagree substantially 
 at the instance level: $1{,}457$ images ($2.9\%$ of the
@@ -145,9 +160,8 @@ are precisely the images a confidence-based selection strategy would fail
 to prioritize for relabelling: the model is not visibly uncertain
 about them, yet their embeddings sit close to a decision boundary.
 
-
 \subsection{Fine-Tuning Results (Landscape $\to$ ARXPHOTO314)}
-\label{sec:res_direction}
+\label{sec:res_finetune}
 
 
 % Table~\ref{tab:direction} reports the concept drift direction matrix for HAS-margin concept-drifted samples, showing the percentage of each true class that drifts
@@ -187,60 +201,55 @@ about them, yet their embeddings sit close to a decision boundary.
 
 
 
-Figure~\ref{fig:learning_curve} shows test-set accuracy as a function of
+Figure~\ref{fig:learning_curve} shows target test-set accuracy as a function of
 annotation budget $N$ for both models, each fine-tuned on an $N$-instance
 subset selected as described in Section~\ref{sec:selection}: HAS selects
-its subset by ranking the margin-flagged pool, while the Baseline draws
-its subset uniformly at its own margin-flagged pool.
+its subset by ranking the margin-flagged pool, while the Baseline ranks
+its own confidence-flagged pool. The selection pool and the target
+test set are disjoint parts of the mapped ARXPHOTO314 images, kept in
+separate folders; the test set consists of the $818$ held-out instances that
+the HAS margin flags as boundary-proximate. Both curves start from the same
+point: before fine-tuning, the Baseline and HAS are $56.0\%$ and $56.1\%$
+accurate on this test set.
 
 \begin{figure}[ht]
     \centering
     \resizebox{0.8\textwidth}{!}{\input{../../results/learning_curve_study/learning_curve_study.pgf}}
-    \caption{Learning curve from concept drift study.}
+    \caption{Target test-set accuracy after fine-tuning on the $N$
+    instances ranked lowest by each model's own score (angular margin for HAS,
+    softmax confidence for the Baseline). Before fine-tuning both models are at
+    $56.0$--$56.1\%$.}
     \label{fig:learning_curve}
 \end{figure}
 
-The HAS model consistently outperforms the baseline across all tested budget 
-levels ($N = 100$ to $N = 300$), with accuracy ranging from $58.3\%$ to $62.0\%$ 
-for HAS and from $56.6\%$ to $61.5\%$ for the baseline.
-Consistent with our initial hypothesis, the data demonstrate that the performance 
-advantage of HAS is largest at small budgets.
-At $N = 200$, the gap reaches $3.42$ percentage points ($61.4\%$ vs $57.9\%$), 
-validating our hypothesis that targeted margin-based sample prioritisation is 
-particularly valuable when annotation resources are scarce. As the budget grows 
-toward $N = 300$, the gap narrows to $0.49$ percentage points, consistent with 
-the expectation that at large budgets Baseline's selection eventually covers the most 
-informative samples as well but also this further highlight that the severity 
-drifted intances of the HAS methodology are better captured.
+HAS outperforms the Baseline at all eleven budgets ($N=100$ to $300$ in steps
+of $20$), by $1.6$ percentage points on average, ranging from $0.5$ points at
+$N=300$ to $3.4$ points at $N=200$ ($61.4\%$ against $57.9\%$). Read
+horizontally, the curves give the saving in annotation effort: HAS reaches the
+Baseline's best accuracy ($61.5\%$ at $N=300$) with $N=220$, i.e.\ with
+$27\%$ fewer labels.
 
+The two curves also differ in shape. Each additional $20$ HAS-selected
+instances raises accuracy in nine of the ten steps, the exception being a
+$0.5$-point dip at $N=260$. Each additional $20$ Baseline-selected instances
+raises it in only six of the ten steps, with drops of up to $1.6$ points,
+and the Baseline curve oscillates between $56.6\%$ and $61.5\%$. Low-margin
+instances thus behave as a coherent set in which almost every addition
+helps, whereas the lowest-confidence instances do not. As $N$ approaches
+$300$, the gap narrows to $0.5$ points, consistent with both selections
+starting to cover the same boundary region. These results support H2: from
+the same starting accuracy, ranking by the HAS margin makes better and more
+predictable use of a small annotation budget than ranking by confidence.
 
-This convergence behaviour is corroborated by the
-critical samples overlap column.
-At $N = 100$, only $7$ instances are shared between the HAS and baseline selections,
-confirming that the two strategies identify largely disjoint subsets at small 
-budgets. At $N = 300$, the overlap grows to $48$ samples, reflecting the 
-gradual convergence of the two selection sets as the budget approaches full 
-pool coverage. Together, these results support hypothesis H2. 
-Thus, prioritising samples by their angular margin in HAS space yields 
-systematically better 
-fine-tuning outcomes than Baseline's space, with the benefit being most pronounced 
-precisely when the annotation budget is most constrained.
-Last but not least, we can observe that the HAS's accuracy is smoothly imporved 
-but adding more critical instances in the fine-tuning pool. One the other hand 
-the Baseline's behavior does not follow a same smooth improvement behavior with 
-spikes in accuracy at $120, 200, 240$ instances.
-This further highlight that the severity drifted intances of the HAS methodology 
-better captured.
-
-Lastly, in Figure~\ref{fig:same_instances} we show that the critical instances 
-selected by HAS and Baseline are largely disjoint, with only $7$ shared instances 
-at $N = 100$ and $48$ at $N = 300$. This further supports the conclusion that HAS 
-identifies a more informative subset of samples for fine-tuning under limited 
-annotation budgets.
+The two selections are also largely different instances
+(Figure~\ref{fig:same_instances}): only $7$ instances are shared at $N=100$,
+rising to $48$ at $N=300$. Since both models start from the same accuracy,
+the difference in outcome reflects what the two scores choose to label.
 
 \begin{figure}[ht]
     \centering
     \resizebox{0.8\textwidth}{!}{\input{../../results/learning_curve_study/instance_learning_plot.pgf}}
-    \caption{Instances selected by HAS and Baseline.}
+    \caption{Instances selected by HAS and Baseline: number of instances
+    shared by the two selections at each budget $N$.}
     \label{fig:same_instances}
 \end{figure}
